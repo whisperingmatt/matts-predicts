@@ -39,7 +39,21 @@ tags (section 6). Write the point-in-time unit test from section 10
 before computing any feature. H12 is unavailable (no Sharadar short
 interest field) — report it as such. Use the sp500 table for H16
 constituent history. Wrap.
-Status: TODO.
+Status: DONE (verified) 2026-09-17. tests/test_point_in_time.py (4
+tests) written first and passing. features.parquet: 2,353,204 rows =
+588,301 universe rows x 4 lags; zero rows with fundamentals filed after
+their as-of date; lag rows match the lag-0 rows of the earlier month
+exactly. regime.parquet: 342 month ends 1998-01..2026-06 with SPY
+drawdown, months since trough, VIX. reports/s3_feature_coverage.md has
+non-null percent per flag per year. Unavailable: H2, H3, H17, H18
+(deferred), H12 (no short interest), H16 (no ETF shares outstanding in
+any Sharadar table — funds is OHLCV only). Interpretations in
+decisions.md "S3 feature interpretations".
+Note for S4: session startup is fetch_bulk, ingest, universe, labels,
+regime, features (about eleven minutes). Join features to labels on
+(ticker, month_end) and to regime on month_end (or asof_month_end for
+the regime at the lagged date; the spec's 7.3 buckets by the decision
+month).
 
 S4 — Build-window statistics (section 7) and
 reports/build_window_results.md. No recommendations. Wrap.

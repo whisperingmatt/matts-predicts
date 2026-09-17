@@ -32,7 +32,7 @@ import duckdb
 
 from src.config import BUILD_END, BUILD_START, HOLDOUT_END, LAGS, PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 
-GRID_START = "2005-01-31"  # BUILD_START minus the longest lag
+GRID_START = "2003-01-31"  # BUILD_START minus the longest lag minus the 13 months H9 looks back
 
 FEATURE_STATUS = {
     "h1_eps_accel": "available", "h4_op_leverage": "available",
@@ -419,6 +419,7 @@ def build_other_features(con: duckdb.DuckDBPyConnection) -> None:
 def assemble(con: duckdb.DuckDBPyConnection) -> None:
     con.execute("""
         CREATE TABLE base AS
+        WITH b0 AS (
         SELECT g.ticker, g.month_end, g.trade_date, g.in_universe,
                f.fund_calendardate, f.fund_filed, f.eps_growth_q0, f.h1_eps_accel, f.h4_op_leverage,
                f.eps_ttm_growth,
@@ -451,6 +452,11 @@ def assemble(con: duckdb.DuckDBPyConnection) -> None:
         LEFT JOIN px_feat x USING (ticker, month_end)
         LEFT JOIN grid p0 ON p0.ticker = g.ticker AND p0.month_end = f.fund_calendardate
         LEFT JOIN grid p4 ON p4.ticker = g.ticker AND p4.month_end = f.cd_q4
+        )
+        SELECT b0.*,
+               CASE WHEN peg IS NOT NULL THEN peg < 1.0 END AS h5_peg_lt_1,
+               CASE WHEN peg IS NOT NULL THEN peg < 0.5 END AS h5_peg_lt_05
+        FROM b0
     """)
     log(con, "base")
     unavailable = ["h12_short_fuel", "h16_sector_flow", "h2_surprise_streak", "h3_estimate_revisions",
