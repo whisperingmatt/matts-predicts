@@ -25,6 +25,9 @@ All results reported raw and by regime bucket.
 D6. Primary data source: Sharadar via Nasdaq Data Link (tables SF1,
 SEP, DAILY, TICKERS, SF2, SF3). Verify table names against current
 Sharadar docs before coding; report if they have changed.
+[SUPERSEDED 2026-09-17 — see "D6 SUPERSEDED" under Repo rulings: the
+subscription is on the Sharadar direct API; table and column names
+mapped there.]
 
 D7. H2 (surprise streak) and H3 (estimate revisions) are DEFERRED. No
 consensus estimate feed in pass one. Do not proxy them.
@@ -73,9 +76,49 @@ versions that install and import cleanly together on Python 3.11 on
 behavior change, pin down to the 2.x line with an entry here rather
 than working around it in code.
 
+2026-09-17 — D6 SUPERSEDED: the subscription is on the Sharadar direct
+API (api.sharadar.com), not Nasdaq Data Link. Matt's ruling, this
+session. Request format, from sharadar.com/docs/getting-started:
+https://api.sharadar.com/v1.0/data/<table>?api_key=<key>&<filters>
+with format=json returning {"count": N, "data": [ {column: value} ]}.
+Table name mapping (NDL name → direct-API name, verified against each
+table's docs page and a live PASS on 2026-09-17):
+SF1 → fundamentals; SEP → stocks; DAILY → daily; TICKERS → tickers;
+SF2 → insiders; SF3 → holdings; SP500 → sp500.
+Column name mapping for names the spec or S1 used:
+SF1 datekey → fundamentals.date (filing date; D2 point-in-time key);
+SF2 filingdate → insiders.date; SF3 calendardate → holdings.date
+(quarter end); SF3 investorname → holdings.investorid (six-character
+code; no name column). All other required columns keep their names.
+Rule for S2 ingest: keep direct-API column names as delivered. Where
+the spec says datekey, code reads fundamentals.date. Do not rename.
+Alternatives rejected: renaming at ingest to the NDL names (adds a
+translation layer whose only purpose is matching the spec's wording);
+staying on Nasdaq Data Link (no subscription there).
+
+2026-09-17 — API key environment variable is SHARADAR_API_KEY, with
+NASDAQ_DATA_LINK_API_KEY read as a fallback. Reason: the old name is
+wrong for a sharadar.com key, but it is already set in the Claude Code
+web environment and possibly on Matt's machine; the fallback avoids a
+silent break. The check script prints which name it used, never the
+value. Alternatives rejected: hard rename (breaks existing
+environments); keeping only the old name (misleading).
+
+2026-09-17 — Pinned stack change: Nasdaq-Data-Link 1.0.4 removed,
+requests 2.33.1 added. Reason: the direct API is plain HTTPS; the NDL
+client cannot call it. Other pins unchanged.
+
+2026-09-17 — Sharadar auth gate: the check probes MSFT, not AAPL, in
+2006–2013 windows. Reason: verified live that api.sharadar.com serves
+the trailing year for any ticker with a bad key or no key at all, and
+AAPL is the public sample. Only rows older than one year prove the key
+and the subscription. Any future data pull that omits from= gets one
+year of data silently; S2 ingest must always set from= and to=.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
 - Proxies for H2, H3, H17, H18 (D7, spec section 5).
 - Filling nulls in features (spec section 5).
 - Any short-interest proxy for H12 (spec section 5; no Sharadar field).
+- Nasdaq Data Link as the data route (no subscription there; D6 superseded).

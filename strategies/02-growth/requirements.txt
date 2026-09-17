@@ -1,5 +1,7 @@
 # Pinned 2026-09-17 on Python 3.11.15. Change only with a decisions.md entry.
-Nasdaq-Data-Link==1.0.4
+# Nasdaq-Data-Link removed 2026-09-17: the subscription is on the Sharadar
+# direct API (api.sharadar.com), reached with requests. See decisions.md.
+requests==2.33.1
 pandas==3.0.5
 numpy==2.4.6
 duckdb==1.5.5
