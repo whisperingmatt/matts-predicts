@@ -1,0 +1,7 @@
+# Pinned 2026-09-17 on Python 3.11.15. Change only with a decisions.md entry.
+Nasdaq-Data-Link==1.0.4
+pandas==3.0.5
+numpy==2.4.6
+duckdb==1.5.5
+pyarrow==25.0.1
+pytest==9.1.1
