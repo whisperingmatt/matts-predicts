@@ -1,0 +1,5 @@
+label,cluster,winners,winner_share,population_rows,population_share,lift,winner_rate,top_fields
+launch_300,1,2209,0.5136014880260404,99765,0.1885353712879707,2.724165150111597,0.022142033779381547,drawdown_from_3y_high (-0.66 sd); pr_pct_from_52w_high (+0.64 sd); pr_ret_12m_skip1 (-0.62 sd)
+launch_300,2,2092,0.48639851197395956,429393,0.8114646287120293,0.5994081501075157,0.004871993721369468,drawdown_from_3y_high (+0.69 sd); pr_pct_from_52w_high (-0.68 sd); pr_ret_12m_skip1 (+0.65 sd)
+win_100,1,10617,0.5212844306967153,144748,0.2592572691548544,2.0106839526468665,0.073348163705198,drawdown_from_3y_high (-0.65 sd); pr_pct_from_52w_high (+0.64 sd); pr_ret_12m_skip1 (-0.59 sd)
+win_100,2,9750,0.47871556930328474,413570,0.7407427308451456,0.6462642822793513,0.023575210967913533,drawdown_from_3y_high (+0.71 sd); pr_pct_from_52w_high (-0.69 sd); pr_ret_12m_skip1 (+0.64 sd)

@@ -88,8 +88,9 @@ and format=csv (the endpoint rejects limit= and the unfiltered CSV does
 not parse as one table). Modern item numbering starts 2004-08-23.
 Verified 2026-09-17.
 duckdb avg() and sum() over doubles are order-dependent under several
-threads; src/anatomy.py runs with threads = 1 so its outputs are
-reproducible (checksum-verified 2026-09-17).
+threads; src/anatomy.py and src/winner_types.py run with threads = 1
+(duckdb) and threadpool_limits(1) (BLAS for scikit-learn) so their
+outputs are reproducible (checksum-verified 2026-09-17).
 No colon in any committed filename — invalid on Windows paths, blocks
 every checkout on Matt's machine.
 Commits and wraps

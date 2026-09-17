@@ -7,3 +7,8 @@ numpy==2.4.6
 duckdb==1.5.5
 pyarrow==25.0.1
 pytest==9.1.1
+# Added 2026-09-17 for S9 clustering (decisions.md "S9 rulings").
+scikit-learn==1.9.1
+scipy==1.17.1
+joblib==1.6.0
+threadpoolctl==3.7.0

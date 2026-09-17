@@ -165,7 +165,21 @@ two cells (base 0.48). Rulings in decisions.md "Chunk 4c".
 S9 — Clustering into winner types (spec section 4): k-means k 2..6
 with silhouette, HDBSCAN check, per-cluster fingerprints, timeline per
 cluster, population frequency per cluster. reports/winner_types.md.
-Ends chunk 4c. Do not start until Matt's brief.
-Startup for a fresh container: fetch_bulk, ingest (now includes
-events), universe, labels, regime, features, labels12, decile, anatomy
-(~14 min).
+Ends chunk 4c.
+Status: DONE (verified) 2026-09-17. src/winner_types.py on T-0 fields
+only, 5.02 proxy and scalemarketcap excluded (decisions.md "S9
+rulings"). Silhouette peaks at k = 2 for both labels at 0.08; HDBSCAN
+finds no cluster at its default setting. The two k-means halves are
+the ends of one axis: "the crash rebound" (51-52% of winners, 19-26%
+of population rows, rough lift 2.7 launch_300 / 2.0 win_100; deep
+drawdown, near the three-year low, high volatility, small, losses,
+net debt, insider buying) and "the pullback in an uptrend" (48-49% of
+winners, lift 0.60-0.65; top momentum ranks, revenue growth in the
+mid teens, R&D, no net debt). No 8-K fingerprint in either. Reading
+in reports/winner_types_reading.md.
+Chunk 4c ends here. No further build session in this repo until chat
+produces a new spec; inputs are reports/anatomy_tables.md and
+reports/winner_types.md alongside the four earlier reports.
+Startup for a fresh container: fetch_bulk, ingest (includes events),
+universe, labels, regime, features, labels12, decile, anatomy,
+winner_types (~17 min).

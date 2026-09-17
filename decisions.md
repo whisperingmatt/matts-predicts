@@ -585,6 +585,37 @@ crisis months in which broad insider buying pushed one-buyer rows out
 of decile 1; it marks market troughs. The 5.02 CEO-change proxy fires
 for over 80% of rows a year and separates nothing.
 
+2026-09-17 — S9 rulings (Matt's S9 brief; src/winner_types.py):
+Clustering inputs are T-0 fields only; T-6 and T-12 values do not
+enter. The 5.02 officer/director proxy (ev52_t12) is dropped from the
+inputs, and ev_total_t12 with it because it contains the 5.02 count;
+both stay in the descriptive tables. scalemarketcap is excluded in
+favor of the point-in-time marketcap_musd (and its GROWTH-002 rank).
+Implementation rulings: dollar-scaled inputs (marketcap_musd,
+avg_dollar_volume_20d, price) enter as log1p; a field whose winner
+coverage is under 50% is left out for that label and listed in the
+report (launch_300: pr_eps_growth_q0, pr_peg, pr_pe,
+pr_pe_vs_5y_median, pr_pegy; win_100: pr_peg, pr_pe_vs_5y_median,
+pr_pegy); remaining nulls are filled with the winners' median, then
+every column is standardized to the winners' mean and standard
+deviation; the same medians and scaler map the population rows for
+the nearest-centroid assignment. k-means n_init 10, seed 0, k in 2..6,
+silhouette on all winners for launch_300 and on a fixed 10,000-row
+sample (seed 0) for win_100, k chosen by the highest silhouette.
+HDBSCAN check at min_cluster_size = 1% of winners (at least 25) at
+scikit-learn's default min_samples plus 25, 10 and 5 as a sensitivity
+row; adjusted Rand index against the k-means labels. Clusters are
+numbered by size. Lift = cluster share of winners / cluster share of
+population rows (winners included, F3). Per-cluster timelines use the
+S8 timeline definition. scikit-learn 1.9.1 (with scipy 1.17.1,
+joblib 1.6.0, threadpoolctl 3.7.0) added to requirements.txt; BLAS
+and duckdb run single-threaded for reproducibility.
+Finding recorded, not a ruling: silhouette peaks at k = 2 at 0.08 for
+both labels and HDBSCAN finds no cluster at its default setting;
+winners lie along one axis (drawdown, momentum, volatility, size) and
+the two k-means halves are its ends, named "the crash rebound" and
+"the pullback in an uptrend". Chunk 4c ends with S9.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
