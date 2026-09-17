@@ -54,7 +54,10 @@ FLAG_COLUMNS = list(FEATURE_STATUS)
 VALUE_COLUMNS = ["eps_growth_q0", "eps_ttm_growth", "peg", "marketcap", "pe", "pb",
                  "rs6_return", "rs12_return", "rs6_pct", "rs12_pct", "inst_pct", "inst_pct_prev",
                  "insider_buyers_90d", "fcf_slope_num", "fcf_period_return", "high52_ratio",
-                 "net_debt_to_ebitda_ttm", "divyield", "fund_calendardate", "fund_filed"]
+                 "net_debt_to_ebitda_ttm", "divyield", "fund_calendardate", "fund_filed",
+                 # GROWTH-002 raw values (2026-09-17)
+                 "rev_growth_accel", "op_margin_delta", "share_count_change_8q", "pe_vs_5y_median",
+                 "atr_contraction", "dist_above_30w_sma"]
 
 
 def P(name: str) -> str:
@@ -204,7 +207,15 @@ def build_fund_seq(con: duckdb.DuckDBPyConnection) -> None:
                CASE WHEN ok_q3 AND ebitda_ttm > 0 AND debt IS NOT NULL AND cashneq IS NOT NULL
                     THEN (debt - cashneq) / ebitda_ttm END AS net_debt_to_ebitda_ttm,
                CASE WHEN ok_q8 AND sharesbas IS NOT NULL AND sharesbas_q8 IS NOT NULL
-                    THEN sharesbas <= sharesbas_q8 * 1.02 END AS h21_no_dilution
+                    THEN sharesbas <= sharesbas_q8 * 1.02 END AS h21_no_dilution,
+               -- GROWTH-002 raw values (decisions.md 2026-09-17): slope of YoY revenue growth over q3..q0,
+               -- operating-margin change vs four quarters back, share count change over eight quarters
+               CASE WHEN ok_q7 AND rg0 IS NOT NULL AND rg1 IS NOT NULL AND rg2 IS NOT NULL AND rg3 IS NOT NULL
+                    THEN (3 * rg0 + rg1 - rg2 - 3 * rg3) / 10 END AS rev_growth_accel,
+               CASE WHEN ok_q4 AND revenue > 0 AND rev_q4 > 0 AND opinc IS NOT NULL AND opinc_q4 IS NOT NULL
+                    THEN opinc / revenue - opinc_q4 / rev_q4 END AS op_margin_delta,
+               CASE WHEN ok_q8 AND sharesbas IS NOT NULL AND sharesbas_q8 > 0
+                    THEN sharesbas / sharesbas_q8 - 1 END AS share_count_change_8q
         FROM s3
     """)
 
@@ -219,7 +230,8 @@ def compute_fundamental_features(con: duckdb.DuckDBPyConnection, grid: str = "gr
                f.calendardate AS fund_calendardate, f.filed AS fund_filed, f.filed_q8 AS fund_filed_q8,
                f.eps AS eps_q0, f.divyield, f.cd_q4, f.eps_growth_q0, f.h1_eps_accel, f.h4_op_leverage,
                f.eps_ttm, f.eps_ttm_growth, f.pe_med20, f.g_med20, f.fcf_slope_num, f.ebitda_ttm,
-               f.h20_leverage_ok, f.net_debt_to_ebitda_ttm, f.h21_no_dilution
+               f.h20_leverage_ok, f.net_debt_to_ebitda_ttm, f.h21_no_dilution,
+               f.rev_growth_accel, f.op_margin_delta, f.share_count_change_8q
         FROM {grid} g
         ASOF LEFT JOIN fund_seq f ON f.ticker = g.ticker AND f.filed <= g.month_end
     """)
@@ -253,7 +265,8 @@ def build_price_features(con: duckdb.DuckDBPyConnection) -> None:
             FROM d2
             WINDOW w20 AS (PARTITION BY ticker ORDER BY date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
         )
-        SELECT ticker, date, close, volume, rn, high252, n252,
+        SELECT ticker, date, close, volume, rn, high252, n252, atr_ratio,
+               lag(atr_ratio, 40) OVER w AS atr_ratio_40,
                CASE WHEN rn >= 62 THEN
                     close > high20_prev
                     AND lag(atr_ratio, 1) OVER w < lag(atr_ratio, 21) OVER w
@@ -292,6 +305,7 @@ def build_price_features(con: duckdb.DuckDBPyConnection) -> None:
             FROM w1 WINDOW w AS (PARTITION BY ticker ORDER BY week_start)
         )
         SELECT ticker, week_start, week_end, wn,
+               CASE WHEN wn >= 30 THEN close / nullif(sma30, 0) - 1 END AS dist_sma30,
                CASE WHEN wn >= 34 THEN
                     close > sma30 AND prev_close <= prev_sma30
                     AND sma30 > sma30_lag4
@@ -307,6 +321,8 @@ def build_price_features(con: duckdb.DuckDBPyConnection) -> None:
     con.execute("""
         CREATE TABLE px_feat AS
         SELECT g.ticker, g.month_end,
+               CASE WHEN d.rn >= 62 AND d.atr_ratio > 0 THEN d.atr_ratio_40 / d.atr_ratio - 1 END AS atr_contraction,
+               wk.dist_sma30 AS dist_above_30w_sma,
                CASE WHEN d.n252 = 252 THEN g.close / d.high252 END AS high52_ratio,
                CASE WHEN d.n252 = 252 THEN g.close >= 0.85 * d.high252 END AS h15_near_high,
                CASE WHEN d.rn >= 62 THEN
@@ -317,6 +333,7 @@ def build_price_features(con: duckdb.DuckDBPyConnection) -> None:
                             AND h.week_end > g.trade_date - INTERVAL 56 DAY AND h.week_end <= g.trade_date) END AS h13_stage2
         FROM grid g
         LEFT JOIN daily_px d ON d.ticker = g.ticker AND d.date = g.trade_date
+        ASOF LEFT JOIN weekly wk ON wk.ticker = g.ticker AND wk.week_end <= g.trade_date
     """)
     log(con, "px_feat")
 
@@ -361,7 +378,7 @@ def build_other_features(con: duckdb.DuckDBPyConnection) -> None:
     # rescaled by close/closeunadj at the quarter end.
     con.execute(f"""
         CREATE TABLE inst_q AS
-        SELECT ticker, date AS qdate, sum(units) * 1000 AS inst_shares
+        SELECT ticker, date AS qdate, sum(units::DECIMAL(18, 4))::DOUBLE * 1000 AS inst_shares  -- exact sum: order-independent
         FROM {P('holdings.parquet')} WHERE securitytype = 'SHR' AND ticker IN (SELECT ticker FROM utick)
         GROUP BY 1, 2
     """)
@@ -440,6 +457,10 @@ def assemble(con: duckdb.DuckDBPyConnection) -> None:
                n.insider_buyers_90d, n.h11_insider_cluster,
                x.h13_stage2, x.h14_vol_contraction, x.high52_ratio, x.h15_near_high,
                f.net_debt_to_ebitda_ttm, f.h20_leverage_ok, f.h21_no_dilution,
+               -- GROWTH-002 raw values, appended 2026-09-17; every column above is unchanged
+               f.rev_growth_accel, f.op_margin_delta, f.share_count_change_8q,
+               CASE WHEN v.pe > 0 AND f.pe_med20 > 0 THEN v.pe / f.pe_med20 END AS pe_vs_5y_median,
+               x.atr_contraction, x.dist_above_30w_sma,
                CASE WHEN v.pe IS NOT NULL THEN v.pe < 15 END AS ctl_pe_lt_15,
                CASE WHEN v.pb IS NOT NULL THEN v.pb < 1.5 END AS ctl_pb_lt_15,
                CASE WHEN f.divyield IS NOT NULL THEN f.divyield > 0.02 END AS ctl_divyield_gt_2

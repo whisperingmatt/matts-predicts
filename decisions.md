@@ -367,6 +367,95 @@ This session ends chunk four. Chunk five (scoring model, entry, exit)
 happens in chat with reports/build_window_results.md and
 reports/holdout_results.md as input.
 
+## Chunk 4b — GROWTH-002 decile retest (spec dated 2026-09-18, built 2026-09-17 AEST)
+
+2026-09-17 — Spec placed at specs/GROWTH-002-decile-retest.md (root
+specs/, per CLAUDE.md), although the spec's own header says
+strategies/02-growth/specs/. Extends GROWTH-001; D1 to D9 stay in force
+except where E1 to E6 say otherwise.
+
+2026-09-17 — GROWTH-002 section 2 names six raw values "from
+features.parquet" that S3 never wrote (they were intermediates inside
+features.py): rev_growth_accel, op_margin_delta, pe_vs_5y_median,
+dist_above_30w_sma, atr_contraction, share_count_change_8q. Ruling:
+append them to features.parquet as new columns by extending
+features.py; do not change any existing column. Verified by comparing
+every S3 column of the old and new files row by row (EXCEPT both ways
+returns 0). The spec's "do not rebuild" is honored in substance: the
+existing features, labels, universe, and regime tags are reused
+unchanged. Definitions (each null under the same conditions as the
+GROWTH-001 flag it comes from):
+rev_growth_accel = least-squares slope of YoY revenue growth over
+q3..q0, (3*rg0 + rg1 - rg2 - 3*rg3)/10 (same formula as the H8 FCF
+slope); op_margin_delta = opinc/revenue at q0 minus at q4;
+share_count_change_8q = sharesbas q0 / sharesbas q8 - 1;
+pe_vs_5y_median = daily pe on the decision date / median SF1 pe over
+q0..q19 (null unless 20 quarters); dist_above_30w_sma = weekly close /
+30-week SMA - 1 at the last week ending on or before the trade date
+(null with fewer than 30 weeks); atr_contraction = ATR20/close 40
+trading days earlier divided by ATR20/close on the trade date, minus 1
+(positive = volatility contracted; null with fewer than 62 days).
+Derived in src/decile.py without new columns: ret_6m_skip1 = rs6_return,
+ret_12m_skip1 = rs12_return, fcf_ps_slope = fcf_slope_num,
+pct_from_52w_high = 1 - high52_ratio, inst_pct_delta_qoq = inst_pct -
+inst_pct_prev, insider_buy_count_90d = insider_buyers_90d,
+net_debt_to_ebitda = net_debt_to_ebitda_ttm, dividend_yield = divyield;
+pegy (E3) = pe / ((eps_ttm_growth + divyield) x 100), null when pe <= 0
+or the denominator <= 0, mirroring H5; shareholder_yield (E3) =
+divyield + buyback_yield with buyback_yield = (shares_q8 -
+shares_q0)/shares_q8 / 2 = -share_count_change_8q / 2 ("annualized over
+2 years" read as divided by two).
+
+2026-09-17 — 12-month labels (E1) live in data/processed/labels12.parquet
+from src/labels12.py, built exactly as labels.py builds the 24-month
+label with a 12-month target month end. labels.parquet is untouched and
+supplies launch_300 as the reference column. Holdout for 12-month
+labels observable through 2025-08 decision dates; E4's 2025-06 end
+stands.
+
+2026-09-17 — Decile rule (E2). Within each (month_end, lag), among
+non-null rows: percent_rank with ties sharing the lowest rank, decile =
+min(10, floor(10 x percent_rank) + 1). Decile 10 always holds the
+maximum and decile 1 the minimum; tied values never split across
+deciles. Consequence: for features with mass points (insider buy count
+is 0 for most rows; dividend yield is 0 for three quarters of rows) the
+deciles are unequal in size, and the decile's row share is printed
+beside every decile lift. Alternatives rejected: ntile (splits ties
+arbitrarily, so deciles 1 to 7 of dividend yield would be
+indistinguishable); dense ranking (loses the 10-bucket meaning).
+
+2026-09-17 — Build-window pass reading (section 3, S6 half). A feature
+"passes in the build window" at a lag when its declared extreme cell
+(decile 10 for HIGH, decile 1 for LOW, deciles 3 to 6 pooled for
+inst_pct) has lift >= 1.5 with Wilson lower bound >= 1.2 on >= 100
+events, and the decile lift curve has Spearman |rho| >= 0.6 with the
+declared sign. rho is computed over the deciles that meet D8 (at least
+5 of them, else rho is not computable and the feature cannot pass).
+A feature passes on a label if it passes at any lag (GROWTH-001's
+"any lag" rule, D-series). The holdout half of the criterion is S7.
+Lift, base, and coverage are among non-null rows at that lag, as in S4.
+Regime-dependent test uses the extreme cell's lift inside drawdown
+buckets 0-10 and 10-20 at the passing lag.
+
+2026-09-17 — Composite (section 4). Membership = features passing on
+win_50 in the build window at any lag (or the top 3 by extreme-decile
+lift, labeled unconfirmed, if fewer than 3 pass). Composite at each lag
+= mean over member features of (decile, or 11 - decile for LOW
+features) among rows where every member is non-null; ranked into
+deciles per (month_end, lag) with the same tie rule. Reported at every
+lag with lag 0 first.
+
+2026-09-17 — Determinism fix in features.py: the 13F institutional
+share sum (inst_q) used a floating-point sum whose order duckdb does not
+fix, so inst_pct differed by up to 2e-13 between runs and 14 of 2.35
+million h10_sponsorship flags flipped where a quarter's level tied
+its predecessor. The sum is now exact decimal, and two consecutive
+runs give identical files. Against the S3 file, 2 flags differ, both
+in the holdout, none in the build window: the S4 report is unchanged;
+the S5 holdout report moved by one row in two h10 cells (rows_true
+7,693 to 7,692 at lag 3 and 7,618 to 7,617 at lag 6) with no lift,
+CI, or verdict change. Regenerated and committed with S6.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
