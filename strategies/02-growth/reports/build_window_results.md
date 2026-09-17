@@ -184,9 +184,9 @@ rows_true = flag-TRUE rows; events = launches among them; rate = events / rows_t
 | h6_compressed_multiple | available | FAIL | - | 3 | 1.38 | 1.21 | 222 | 62.5% |
 | h7_neglect | available | FAIL | - | 0 | 1.47 | 1.41 | 2083 | 99.7% |
 | h8_fcf_divergence | available | FAIL | - | 6 | 0.61 | 0.52 | 166 | 95.3% |
-| h9_rs6_top_decile | available | PASS | 6,12,3 | 12 | 2.40 | 2.18 | 401 | 80.6% |
-| h9_rs12_top_decile | available | PASS | 6,3,12 | 12 | 2.46 | 2.23 | 413 | 79.9% |
-| h10_sponsorship | available | PASS | 6,12,3,0 | 6 | 2.39 | 2.03 | 139 | 39.3% |
+| h9_rs6_top_decile | available | PASS | 3,6,12 | 12 | 2.40 | 2.18 | 401 | 80.6% |
+| h9_rs12_top_decile | available | PASS | 3,6,12 | 12 | 2.46 | 2.23 | 413 | 79.9% |
+| h10_sponsorship | available | PASS | 0,3,6,12 | 6 | 2.39 | 2.03 | 139 | 39.3% |
 | h11_insider_cluster | available | FAIL | - | 0 | 1.94 | 1.69 | 196 | 82.4% |
 | h13_stage2 | available | insufficient | - | - | - | - | - | - |
 | h14_vol_contraction | available | FAIL | - | 0 | 1.03 | 0.91 | 261 | 100.0% |
