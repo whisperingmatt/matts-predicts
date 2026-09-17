@@ -79,6 +79,17 @@ The daily table has no short-interest field (ev, evebit, evebitda,
 marketcap, pb, pe, ps only). H12 short_fuel is unavailable from
 Sharadar. Verified 2026-09-17 against sharadar.com/docs/daily and a
 live query.
+Sharadar events table (8-K, bulk table "events", in BULK_TABLES since
+S8): columns ticker, date (filing date), eventcodes = pipe-joined
+two-digit codes where 8-K item X.0Y is "XY" (11 = 1.01, 22 = 2.02, 52 =
+5.02, 81 = 8.01); codes 34 (13G), 35 (13D), 91 (exhibits) also appear.
+The code list is the descriptions table filtered with table=eventcodes
+and format=csv (the endpoint rejects limit= and the unfiltered CSV does
+not parse as one table). Modern item numbering starts 2004-08-23.
+Verified 2026-09-17.
+duckdb avg() and sum() over doubles are order-dependent under several
+threads; src/anatomy.py runs with threads = 1 so its outputs are
+reproducible (checksum-verified 2026-09-17).
 No colon in any committed filename — invalid on Windows paths, blocks
 every checkout on Matt's machine.
 Commits and wraps

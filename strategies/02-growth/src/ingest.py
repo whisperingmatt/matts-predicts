@@ -32,7 +32,7 @@ from src.config import BULK_TABLES, RAW_DIR
 DATE_COLUMN = {
     "tickers": "lastpricedate", "fundamentals": "date", "stocks": "date",
     "daily": "date", "insiders": "date", "holdings": "date", "sp500": "date",
-    "funds": "date",
+    "funds": "date", "events": "date",
 }
 
 

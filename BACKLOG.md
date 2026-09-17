@@ -142,3 +142,30 @@ decisions.md "S7 holdout rulings".
 Chunk 4b ends here. No further build session in this repo until chat
 produces a new spec; both decile reports plus the two GROWTH-001
 reports are the inputs.
+
+## Chunk 4c — GROWTH-003 winner anatomy (specs/GROWTH-003-winner-anatomy.md)
+
+S8 — Section 2 fields on the existing grid (events table ingested),
+8-K coverage per code per year, the four anatomy tables (3.1 to 3.4)
+for launch_300 and win_100, build and holdout pooled (F2), plus
+Matt's section 3.5 (win_100 against loss_50 by decile).
+reports/anatomy_tables.md with a plain-prose reading. Wrap, PR.
+Status: DONE (verified) 2026-09-17. src/anatomy.py; events bulk table
+added to fetch_bulk/ingest (2,531,005 rows, 1993-11 to 2026-09);
+data/processed/anatomy_fields.parquet (2,289,378 rows, regenerable).
+launch_300: 4,301 winners in 529,158 rows; win_100: 20,367 in 558,318.
+Largest gaps for both labels: drawdown from the three-year high,
+realized volatility, price level, market cap, loss-making latest
+quarter, years listed, SPY drawdown over 30%; 8-K counts flat before
+T-0; during the move, unregistered equity sales and >10% share growth
+about twice the population rate. Section 3.5: win_100 and loss_50
+rates rise together in every feature, ratio 0.30 to 0.82 in all but
+two cells (base 0.48). Rulings in decisions.md "Chunk 4c".
+
+S9 — Clustering into winner types (spec section 4): k-means k 2..6
+with silhouette, HDBSCAN check, per-cluster fingerprints, timeline per
+cluster, population frequency per cluster. reports/winner_types.md.
+Ends chunk 4c. Do not start until Matt's brief.
+Startup for a fresh container: fetch_bulk, ingest (now includes
+events), universe, labels, regime, features, labels12, decile, anatomy
+(~14 min).

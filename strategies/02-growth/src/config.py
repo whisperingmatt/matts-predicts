@@ -20,7 +20,8 @@ TABLES = ["tickers", "fundamentals", "stocks", "daily", "insiders", "holdings", 
 
 # Bulk files pulled by src/fetch_bulk.py (Full History). funds is added for
 # S3 regime tags (SPY) and H16 (sector SPDRs); it is not an S1 check table.
-BULK_TABLES = [*TABLES, "funds"]
+# events (8-K item codes) is added for GROWTH-003 section 2 (S8).
+BULK_TABLES = [*TABLES, "funds", "events"]
 
 # D4 — windows
 BUILD_START, BUILD_END = "2006-01-31", "2019-12-31"
