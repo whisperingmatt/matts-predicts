@@ -45,19 +45,33 @@ are different states — say which one is true.
 Environment facts (permanent — do not rediscover)
 Python 3.11. Virtualenv at .venv/ (gitignored). Pinned versions in
 strategies/02-growth/requirements.txt.
-Sharadar is reached via the nasdaq-data-link Python package. The API
-key is read from the environment variable NASDAQ_DATA_LINK_API_KEY.
+Sharadar is reached via the Sharadar direct API, base URL
+https://api.sharadar.com/v1.0/data/<table>, using the requests package.
+The subscription is on sharadar.com, not Nasdaq Data Link. The API key
+is read from the environment variable SHARADAR_API_KEY (fallback name
+NASDAQ_DATA_LINK_API_KEY, kept because existing environments set it).
 Never commit it. Never pass it on a command line that gets logged.
-Nasdaq Data Link column names differ from Sharadar's newer direct API
-(api.sharadar.com): NDL SF1 uses datekey, NDL SF2 uses filingdate;
-the direct API renames both to date. This repo uses NDL names.
-Claude Code on the web (this environment) cannot reach data.nasdaq.com
-or sharadar.com — the egress proxy returns 403 on CONNECT. Live
-Sharadar pulls must run on Matt's machine or a session whose network
-policy allows those hosts. Verified 2026-09-17.
-SHARADAR/DAILY has no short-interest field (ev, evebit, evebitda,
+Direct-API table names: fundamentals (SF1), stocks (SEP), daily,
+tickers, insiders (SF2), holdings (SF3), sp500. Column names differ
+from the Nasdaq Data Link feed: fundamentals.date is the filing date
+the spec calls datekey; insiders.date is the filing date NDL called
+filingdate; holdings.date is the quarter end NDL called calendardate
+and holdings has investorid, not investorname. This repo uses the
+direct-API names in code; the spec's NDL names map as above.
+Direct-API quirks (verified 2026-09-17): from= and to= default to one
+year ago and yesterday, so every historical pull must set them; the
+unauthenticated tier returns the trailing year for any ticker and any
+key, so only rows older than one year prove authentication; limit
+defaults to 10000 with skip for paging; years=full gives a bulk CSV
+zip; format=json returns large integers as strings, format=csv does
+not.
+Claude Code on the web (this environment) can reach api.sharadar.com
+but cannot reach sharadar.com (docs) or data.nasdaq.com — the egress
+proxy returns 403 on CONNECT for those two. Verified 2026-09-17.
+The daily table has no short-interest field (ev, evebit, evebitda,
 marketcap, pb, pe, ps only). H12 short_fuel is unavailable from
-Sharadar. Verified 2026-09-17 against sharadar.com/docs/daily.
+Sharadar. Verified 2026-09-17 against sharadar.com/docs/daily and a
+live query.
 No colon in any committed filename — invalid on Windows paths, blocks
 every checkout on Matt's machine.
 Commits and wraps

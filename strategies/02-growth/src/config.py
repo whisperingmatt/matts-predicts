@@ -6,10 +6,17 @@ RAW_DIR = STRATEGY_DIR / "data" / "raw"
 PROCESSED_DIR = STRATEGY_DIR / "data" / "processed"
 REPORTS_DIR = STRATEGY_DIR / "reports"
 
-API_KEY_ENV = "NASDAQ_DATA_LINK_API_KEY"
+# Sharadar direct API (api.sharadar.com), not Nasdaq Data Link. See decisions.md
+# 2026-09-17 "D6 superseded". The fallback variable name is the one S1 chose
+# before the subscription type was known; both are read, neither is ever printed.
+SHARADAR_API_BASE = "https://api.sharadar.com/v1.0/data"
+API_KEY_ENV = "SHARADAR_API_KEY"
+API_KEY_ENV_FALLBACK = "NASDAQ_DATA_LINK_API_KEY"
 
-# D6 — Sharadar tables on Nasdaq Data Link. Verified 2026-09-17 (see decisions.md).
-TABLES = ["SF1", "SEP", "DAILY", "TICKERS", "SF2", "SF3", "SP500"]
+# D6 (superseded) — direct-API table names. NDL aliases: fundamentals=SF1,
+# stocks=SEP, daily=DAILY, tickers=TICKERS, insiders=SF2, holdings=SF3,
+# sp500=SP500. Verified against sharadar.com/docs 2026-09-17.
+TABLES = ["tickers", "fundamentals", "stocks", "daily", "insiders", "holdings", "sp500"]
 
 # D4 — windows
 BUILD_START, BUILD_END = "2006-01-31", "2019-12-31"
