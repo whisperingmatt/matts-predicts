@@ -71,21 +71,32 @@ def pq(name: str) -> str:
 
 # ------------------------------------------------------------------ data
 
-def load(con: duckdb.DuckDBPyConnection) -> None:
+INVERTED = {"inv_h15_near_high": "h15_near_high", "inv_h21_no_dilution": "h21_no_dilution",
+            "inv_h8_fcf_divergence": "h8_fcf_divergence", "inv_ctl_divyield_gt_2": "ctl_divyield_gt_2"}
+
+
+def load(con: duckdb.DuckDBPyConnection, start: str = BUILD_START, end: str = BUILD_END) -> None:
+    """Table d: universe rows x lags inside [start, end] with flags, labels, regime, sector.
+
+    The four inverted flags (NOT of the build window's backward signals; null
+    stays null) are added for S5. They are not part of AVAILABLE, so the
+    build-window tables never include them.
+    """
     con.execute(f"""
         CREATE TABLE d AS
         SELECT f.ticker, f.month_end, f.lag, year(f.month_end) AS year,
                {", ".join("f." + c for c in FLAGS)},
+               {", ".join(f"NOT f.{src} AS {inv}" for inv, src in INVERTED.items())},
                l.launch_300, l.launch_200, l.launch_500,
                r.drawdown_bucket, r.mst_bucket, coalesce(u.sector, 'Unknown') AS sector
         FROM {pq('features.parquet')} f
         JOIN {pq('labels.parquet')} l USING (ticker, month_end)
         JOIN {pq('regime.parquet')} r ON r.month_end = f.month_end
         JOIN {pq('universe.parquet')} u USING (ticker, month_end)
-        WHERE f.month_end BETWEEN DATE '{BUILD_START}' AND DATE '{BUILD_END}'
+        WHERE f.month_end BETWEEN DATE '{start}' AND DATE '{end}'
     """)
     n, nl = con.execute("SELECT count(*), count(*) FILTER (WHERE lag = 0) FROM d").fetchone()
-    print(f"build-window rows: {n:,} ({nl:,} per lag)")
+    print(f"rows {start}..{end}: {n:,} ({nl:,} per lag)")
 
 
 # ------------------------------------------------------------- base rates
@@ -117,9 +128,9 @@ def base_rates(con) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 # ---------------------------------------------------------- single signal
 
-def single_signal(con) -> pd.DataFrame:
+def single_signal(con, flags: list[str] | None = None) -> pd.DataFrame:
     frames = []
-    for flag in AVAILABLE:
+    for flag in (flags or AVAILABLE):
         rows = con.execute(f"""
             WITH g AS (
                 SELECT lag, 'all' AS bucket_type, 'ALL' AS bucket, {flag} AS flag, launch_300, launch_200, launch_500 FROM d
@@ -141,6 +152,9 @@ def single_signal(con) -> pd.DataFrame:
         rows["flag"] = flag
         frames.append(rows)
     wide = pd.concat(frames, ignore_index=True)
+    # duckdb GROUP BY order is not stable; sort in FLAGS order so combination names keep the spec's order
+    wide["_o"] = wide["flag"].map({f: i for i, f in enumerate(FLAGS + list(INVERTED))})
+    wide = wide.sort_values(["_o", "lag", "bucket_type", "bucket"]).drop(columns="_o").reset_index(drop=True)
     out = []
     for thr in THRESHOLDS:
         t = thr.split("_")[1]
@@ -177,7 +191,7 @@ def verdicts(ss: pd.DataFrame) -> pd.DataFrame:
             verdict = "CRASH-ONLY"
         rows.append({
             "flag": flag, "verdict": verdict,
-            "pass_lags": ",".join(str(int(x)) for x in passing["lag"].tolist()),
+            "pass_lags": ",".join(str(int(x)) for x in sorted(passing["lag"].tolist())),
             "best_lag": None if best is None else int(best["lag"]),
             "best_lift": None if best is None else best["lift"],
             "best_ci_low": None if best is None else best["ci_low"],
@@ -189,42 +203,66 @@ def verdicts(ss: pd.DataFrame) -> pd.DataFrame:
 
 # ------------------------------------------------------------ combinations
 
-def combinations(con, ss: pd.DataFrame) -> pd.DataFrame:
+def evaluate_combos(con, combos: list[tuple[int, tuple[str, ...]]]) -> pd.DataFrame:
+    """One row per (lag, combination): AND of the flags, lift against the base among rows where all are non-null.
+
+    Also carries the launch_200 lift and CI (k200_nn / n_nn as its base) so a
+    combination can be read on both thresholds.
+    """
     total = {int(r[0]): int(r[1]) for r in con.execute(
         "SELECT lag, count(*) FILTER (WHERE launch_300) FROM d GROUP BY 1").fetchall()}
+    total200 = {int(r[0]): int(r[1]) for r in con.execute(
+        "SELECT lag, count(*) FILTER (WHERE launch_200) FROM d GROUP BY 1").fetchall()}
     rows_all = {int(r[0]): int(r[1]) for r in con.execute("SELECT lag, count(*) FROM d GROUP BY 1").fetchall()}
-    s = ss[(ss["threshold"] == "launch_300") & (ss["bucket_type"] == "all")]
     out = []
+    for lag, combo in combos:
+        nn = " AND ".join(f"{c} IS NOT NULL" for c in combo)
+        tr = " AND ".join(combo)
+        r = con.execute(f"""
+            SELECT count(*) FILTER (WHERE {nn}), count(*) FILTER (WHERE {tr}),
+                   count(*) FILTER (WHERE {nn} AND launch_300), count(*) FILTER (WHERE {tr} AND launch_300),
+                   count(*) FILTER (WHERE {nn} AND launch_200), count(*) FILTER (WHERE {tr} AND launch_200),
+                   count(*) FILTER (WHERE {tr} AND launch_500)
+            FROM d WHERE lag = {lag}
+        """).fetchone()
+        n_nn, n_true, k_nn, k_true, k200_nn, k200, k500 = r
+        base = k_nn / n_nn if n_nn else float("nan")
+        rate = k_true / n_true if n_true else float("nan")
+        lo, hi = wilson(k_true, n_true)
+        base200 = k200_nn / n_nn if n_nn else float("nan")
+        rate200 = k200 / n_true if n_true else float("nan")
+        lo2, hi2 = wilson(k200, n_true)
+        out.append({
+            "lag": lag, "size": len(combo), "combo": " AND ".join(combo), "flags": combo,
+            "n_nn": n_nn, "n_true": n_true, "events": k_true, "base": base, "rate": rate,
+            "lift": rate / base if base else float("nan"),
+            "ci_low": lo / base if base else float("nan"), "ci_high": hi / base if base else float("nan"),
+            "catch": k_true / total[lag] if total.get(lag) else float("nan"), "nn_share": n_nn / rows_all[lag],
+            "rate_200": rate200, "events_200": k200,
+            "lift_200": rate200 / base200 if base200 else float("nan"),
+            "ci_low_200": lo2 / base200 if base200 else float("nan"),
+            "ci_high_200": hi2 / base200 if base200 else float("nan"),
+            "catch_200": k200 / total200[lag] if total200.get(lag) else float("nan"),
+            "rate_500": k500 / n_true if n_true else float("nan"),
+            "events_500": k500,
+            "sufficient": k_true >= MIN_EVENTS_PER_CELL,
+            "sufficient_200": k200 >= MIN_EVENTS_PER_CELL,
+        })
+    if not out:
+        return pd.DataFrame(columns=["lag", "size", "combo", "lift", "sufficient"])
+    return pd.DataFrame(out)
+
+
+def combinations(con, ss: pd.DataFrame) -> pd.DataFrame:
+    s = ss[(ss["threshold"] == "launch_300") & (ss["bucket_type"] == "all")]
+    combos = []
     for lag in LAGS:
         q = s[(s["lag"] == lag) & s["sufficient"] & (s["lift"] >= COMBO_MIN_LIFT)]["flag"].tolist()
         for size in range(2, MAX_COMBINATION_SIZE + 1):
-            for combo in itertools.combinations(q, size):
-                nn = " AND ".join(f"{c} IS NOT NULL" for c in combo)
-                tr = " AND ".join(combo)
-                r = con.execute(f"""
-                    SELECT count(*) FILTER (WHERE {nn}), count(*) FILTER (WHERE {tr}),
-                           count(*) FILTER (WHERE {nn} AND launch_300), count(*) FILTER (WHERE {tr} AND launch_300),
-                           count(*) FILTER (WHERE {tr} AND launch_200), count(*) FILTER (WHERE {tr} AND launch_500)
-                    FROM d WHERE lag = {lag}
-                """).fetchone()
-                n_nn, n_true, k_nn, k_true, k200, k500 = r
-                base = k_nn / n_nn if n_nn else float("nan")
-                rate = k_true / n_true if n_true else float("nan")
-                lo, hi = wilson(k_true, n_true)
-                out.append({
-                    "lag": lag, "size": size, "combo": " AND ".join(combo), "flags": combo,
-                    "n_nn": n_nn, "n_true": n_true, "events": k_true, "base": base, "rate": rate,
-                    "lift": rate / base if base else float("nan"),
-                    "ci_low": lo / base if base else float("nan"), "ci_high": hi / base if base else float("nan"),
-                    "catch": k_true / total[lag], "nn_share": n_nn / rows_all[lag],
-                    "rate_200": k200 / n_true if n_true else float("nan"),
-                    "rate_500": k500 / n_true if n_true else float("nan"),
-                    "events_500": k500,
-                    "sufficient": k_true >= MIN_EVENTS_PER_CELL,
-                })
-    if not out:
-        return pd.DataFrame(columns=["lag", "size", "combo", "lift", "sufficient"])
-    cb = pd.DataFrame(out)
+            combos += [(lag, c) for c in itertools.combinations(q, size)]
+    cb = evaluate_combos(con, combos)
+    if cb.empty:
+        return cb
     cb["qualifying_flags_at_lag"] = cb["lag"].map(
         {lag: ", ".join(s[(s["lag"] == lag) & s["sufficient"] & (s["lift"] >= COMBO_MIN_LIFT)]["flag"]) for lag in LAGS})
     return cb.sort_values(["sufficient", "lift", "catch"], ascending=[False, False, False]).reset_index(drop=True)

@@ -339,6 +339,34 @@ and is inserted verbatim when the report is regenerated, so numbers can
 be regenerated without retyping the prose. It contains no
 recommendations (7.6).
 
+2026-09-17 — S5 holdout rulings (Matt's S5 brief, superseding section
+8's wording where they differ; implemented in src/holdout.py):
+Window: 2020-01 to 2024-06, not D4's 2026-06. A 24-month return is not
+observable after 2024-08 decision dates with prices to 2026-09-16, so
+2024-06 is the last month end whose full cohort is labeled; D4's end
+date stands for the universe and features, and the holdout statistics
+stop where the labels do.
+Tested: the three build-window PASS flags (h9_rs6_top_decile,
+h9_rs12_top_decile, h10_sponsorship carried with its calm-only caveat),
+the two-horizon strength combination at every lag, the fifth
+D8-clearing build combination (h5_peg_lt_05 AND ctl_pe_lt_15 at lag 3;
+section 8's "top-20 combinations" reduces to these five), and the four
+backward build-window signals as inverted flags: NOT h15_near_high,
+NOT h21_no_dilution, NOT h8_fcf_divergence, NOT ctl_divyield_gt_2
+(null stays null). Inverting a backward signal is a test of whether
+the reverse description survives, not a new hypothesis; the spec's
+hypotheses stay as written and the inverted flags are labeled as
+inverted everywhere.
+launch_200 reported beside launch_300 in every table. Sector table
+pooled across years. Regime buckets as S4. CONFIRM = holdout lift
+>= 1.5 with lower CI >= 1.0 on a D8-sufficient cell (section 8).
+Build-window numbers for the tested flags are recomputed in holdout.py
+with the same code for the comparison columns; the S4 report is not
+regenerated and its numbers are unchanged.
+This session ends chunk four. Chunk five (scoring model, entry, exit)
+happens in chat with reports/build_window_results.md and
+reports/holdout_results.md as input.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).

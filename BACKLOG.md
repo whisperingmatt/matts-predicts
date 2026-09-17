@@ -80,4 +80,22 @@ dates; record that when S5 opens it.
 
 S5 — Holdout (section 8) and reports/holdout_results.md. Only after
 the S4 wrap is committed. Wrap.
-Status: TODO.
+Status: DONE (verified) 2026-09-17. Window 2020-01 to 2024-06 (labels
+unobservable after 2024-08; decisions.md). src/holdout.py on the
+parametrized src/stats.py. Tested per Matt's S5 brief: the three
+build PASS flags, the two-horizon pair at every lag, PEG<0.5 AND PE<15
+at lag 3, and the four backward signals inverted; launch_200 beside
+launch_300 throughout; sector pooled; regime buckets as S4.
+CONFIRMS: h9_rs6_top_decile at lags 0 and 3 (2.03 [1.83, 2.25] at
+lag 0), h9_rs12_top_decile at lags 0 and 3 (1.63 [1.45, 1.83]), the
+pair at lags 0, 3, 6 (2.02 [1.75, 2.34] at lag 0). NOT CONFIRMED:
+lags 6 and 12 of the singles (the build window's strongest cells),
+h10_sponsorship (1.39 to 1.44, lower bound under 1.5 everywhere),
+PEG AND PE (insufficient, 0.96), all four inverted flags (three have
+a lift ceiling under 1.5 by construction). Full tables in
+reports/holdout_results.md and reports/s5_*.csv; reading in
+reports/holdout_reading.md.
+This ends chunk four. Chunk five (scoring model, entry, exit) happens
+in chat with reports/build_window_results.md and
+reports/holdout_results.md as input. No further build session is
+scheduled in this repo until chat produces a new spec.
