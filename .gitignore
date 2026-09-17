@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets — never commit. API key lives in env var NASDAQ_DATA_LINK_API_KEY.
+.env
+
+# Data caches (large, regenerable from Sharadar)
+strategies/*/data/raw/*
+strategies/*/data/processed/*
+!strategies/*/data/raw/.gitkeep
+!strategies/*/data/processed/.gitkeep
