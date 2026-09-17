@@ -141,6 +141,74 @@ network policy to allow static-sharadar.nyc3.digitaloceanspaces.com, or
 pull of roughly 3,000 requests over 2–3 hours. Matt decides; recorded as
 an open question in the S2 wrap. Not ruled out: any of the three.
 
+2026-09-17 — Bulk downloads UNBLOCKED: Matt allowed
+static-sharadar.nyc3.digitaloceanspaces.com in the matts-predicts
+environment's network policy. src/fetch_bulk.py pulled all eight Full
+History files from Claude Code on the web the same day. The earlier
+entry's options (a) is the one taken.
+
+2026-09-17 — Universe rules mapping (spec section 3 onto Sharadar's
+current field values; implemented in src/universe.py):
+Category: the spec says "Domestic Common Stock". Sharadar now splits
+that into Domestic Common Stock, ... Primary Class, ... Secondary Class.
+Included: the plain value and Primary Class. Excluded: Secondary Class,
+so one issuer contributes one launch. ADRs, Canadian filers, preferred,
+CEF, ETF, ETN, ETD, UNIT are other category values and drop out.
+Exchange: NYSE, NASDAQ, NYSEMKT, as the spec lists.
+SPACs: Sharadar industry = "Shell Companies" (1,666 domestic common
+tickers). REITs: industry starting "REIT" (about 480 tickers). Both are
+excluded by industry. Real estate operating companies are not REITs and
+stay in.
+Limitation: category, exchange, and industry are the current values in
+the tickers table; Sharadar keeps no history for them, so a ticker that
+changed exchange or business is classified by its last state.
+Price floor: closeunadj (the price that traded that day), not the
+split-adjusted close. Dollar volume: mean of close*volume over the 20
+trading days ending on the decision date's trade (split adjustments
+cancel in the product). Fewer than 20 prior trading days disqualifies
+the month.
+EPS history: at least four distinct fiscal quarters (calendardate) with
+non-null eps in fundamentals ARQ, filed on or before the decision date
+(fundamentals.date, the spec's datekey), with quarter ends inside the
+trailing 16 months. Reason: "four quarters in the trailing 12 months"
+cannot be met literally at most month ends because the latest quarter
+is not yet filed; 16 months is 12 months of quarter ends plus one
+quarter of filing lag (10-K up to 90 days). Alternatives rejected:
+literal 12-month window (empties the universe); dimension ART (not what
+the spec names; not guaranteed present).
+Table codes: the bulk tickers.csv.zip carries legacy codes in its
+"table" column (SEP, SF1, SF2, SF3B, SFP) while the paged API returns
+modern names (stocks, fundamentals, ...). Code accepts both.
+
+2026-09-17 — Label mechanics (spec section 4; src/labels.py): t is the
+universe row's trade date; t+24m is the last trade on or before the
+month end 24 calendar months later, found with an ASOF join on the
+price table. No trade in that target month means the last available
+closeadj is used and delisted_before_t24 is set (delist is terminal).
+A target month end after the last price date gives a null return, so
+holdout rows near the data edge stay unlabeled rather than guessed.
+Base rates are reported for the build window only; holdout rows are
+labeled in labels.parquet but nothing about them is printed.
+
+2026-09-17 — History-start limitations from the ingested Full History
+files (data/raw/ingest_manifest.json): holdings (SF3) begins
+2013-06-30, insiders (SF2) begins 2008-01-02, while the
+build window begins 2006-01-31. H10 sponsorship is therefore null for
+every decision date before 2013-09 (the first quarter end plus filing
+lag) and H11 insider_cluster is null before 2008-04 (90-day trailing
+window). Spec section 5 says never fill; S4 reports these features on
+the months where they exist and marks the earlier cells "insufficient"
+if they fall under D8. stocks, daily, fundamentals, sp500, and funds all
+reach back before 2006. Alternatives rejected: shifting the build window
+(D4 is locked); proxying either feature (ruled out).
+
+2026-09-17 — S2 result numbers, build window 2006-01 to 2019-12
+(reports/s2_base_rates.md): 393,429 universe rows, 6,168 tickers,
+2,603 launch_300 rows (0.66%), 7,408 launch_200 (1.88%), 629
+launch_500 (0.16%). Validity gate passed (0.5% to 5%). 4,361 of the
+7,787 universe tickers are delisted today. Three rows were recomputed
+independently with pandas from the price table and matched to 1e-9.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
