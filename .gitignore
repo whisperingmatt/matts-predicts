@@ -8,7 +8,7 @@ __pycache__/
 .env
 
 # Data caches (large, regenerable from Sharadar)
-strategies/*/data/raw/
-strategies/*/data/processed/
+strategies/*/data/raw/*
+strategies/*/data/processed/*
 !strategies/*/data/raw/.gitkeep
 !strategies/*/data/processed/.gitkeep
