@@ -190,6 +190,25 @@ holdout rows near the data edge stay unlabeled rather than guessed.
 Base rates are reported for the build window only; holdout rows are
 labeled in labels.parquet but nothing about them is printed.
 
+2026-09-17 — History-start limitations from the ingested Full History
+files (data/raw/ingest_manifest.json): holdings (SF3) begins
+2013-06-30, insiders (SF2) begins 2008-01-02, while the
+build window begins 2006-01-31. H10 sponsorship is therefore null for
+every decision date before 2013-09 (the first quarter end plus filing
+lag) and H11 insider_cluster is null before 2008-04 (90-day trailing
+window). Spec section 5 says never fill; S4 reports these features on
+the months where they exist and marks the earlier cells "insufficient"
+if they fall under D8. stocks, daily, fundamentals, sp500, and funds all
+reach back before 2006. Alternatives rejected: shifting the build window
+(D4 is locked); proxying either feature (ruled out).
+
+2026-09-17 — S2 result numbers, build window 2006-01 to 2019-12
+(reports/s2_base_rates.md): 393,429 universe rows, 6,168 tickers,
+2,603 launch_300 rows (0.66%), 7,408 launch_200 (1.88%), 629
+launch_500 (0.16%). Validity gate passed (0.5% to 5%). 4,361 of the
+7,787 universe tickers are delisted today. Three rows were recomputed
+independently with pandas from the price table and matched to 1e-9.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
