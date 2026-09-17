@@ -91,6 +91,19 @@ duckdb avg() and sum() over doubles are order-dependent under several
 threads; src/anatomy.py and src/winner_types.py run with threads = 1
 (duckdb) and threadpool_limits(1) (BLAS for scikit-learn) so their
 outputs are reproducible (checksum-verified 2026-09-17).
+Sharadar stocks: open, high, low, close are split-adjusted (AAPL
+closed 23.12 the day before its 2014 7-for-1 split), closeadj is
+split- and dividend-adjusted, closeunadj is raw; volume is
+split-adjusted. TradingView's default series is split-adjusted with
+dividends off, so it matches Sharadar close, not closeadj. Verified
+2026-09-17.
+TradingView (Strategy Tester, Pine) cannot be run from Claude Code on
+the web; that leg of any check is Matt's, from the Pine script and
+settings the report gives.
+Backtest data prep (src/engine.py build_data) writes bars.parquet
+(2.2 GB, 22M rows), weekly.parquet, weekly_raw.parquet, spy.parquet,
+spy_weekly.parquet to data/processed in about 4.5 minutes; they are
+gitignored and regenerable.
 No colon in any committed filename — invalid on Windows paths, blocks
 every checkout on Matt's machine.
 Commits and wraps

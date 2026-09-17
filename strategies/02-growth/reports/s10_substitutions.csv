@@ -1,0 +1,31 @@
+system,rule,original,proxy
+all,Universe membership at signal,GROWTH-001 universe by month end,a stock is eligible on a date when a universe row exists for the latest month end on or before it
+all,Next-open fill,next day's open,"the ticker's next bar after the signal; a ticker with no bar the next day fills at its next bar within five trading days, then the order lapses; a new evaluation replaces unfilled orders"
+all,Slippage tier,marketcap >= $2B,daily.marketcap on the fill day (USD millions); unknown market cap takes the 0.25% tier
+all,Equal weight,equal weight across slots,"each entry sized to equity / slots at the fill, capped by cash; whole shares"
+all,Candidate order,not specified,"when candidates exceed free slots, the highest relative-strength rank enters first; ties by ticker"
+all,Delisting while held,not specified,"when a held ticker has no further bar in the data it is closed at its last close, small-cap slippage, reason delisted"
+all,Open positions at 2025-06-30,not specified,"closed at the last close, reason end_of_test, kept in the trade stats and flagged"
+all,Expectancy per trade,expectancy % per trade after costs,for the pass test: net profit over capital deployed in the window's closed trade rows; the plain mean of row returns is shown beside it (partial sales are separate rows)
+all,Trade window,per window,a trade belongs to the window of its exit date; the equity curve is continuous across windows
+S-A,"C quarterly EPS YoY >= 25%, higher than the prior quarter's YoY",quarterly EPS,"ARQ eps (basic, split-adjusted to today's basis) by filing date; YoY needs a positive year-ago quarter; prior quarter's YoY on the same basis"
+S-A,A annual EPS growth >= 25% each of the last 3 fiscal years,3 fiscal years,"12 trailing ARQ quarters summed into three years as the spec directs, which gives two annual growth rates, both >= 25%, with positive bases; quarter spacing checked (q4 at 11-13 months, q8 at 23-25, q11 at 32-34)"
+S-A,N price within 5% of 52-week high,52-week high,implied by the entry: the close is a new 52-week closing high
+S-A,S shares not rising over 8 quarters or buyback,shares outstanding,"ARQ sharesbas now <= sharesbas eight quarters earlier, no tolerance"
+S-A,L relative strength percentile >= 80,O'Neil RS rating,percent rank of the 252-trading-day return among universe members on the evaluation day
+S-A,I institutional % rising QoQ (2013+),institutional ownership,"features.parquet inst_pct > inst_pct_prev at the latest month end on or before the evaluation day (13F, 45-day lag); the test is skipped before 2013-01-01 and both segments are reported"
+S-A,M SPY above 50-day and 200-day,SPY,funds SPY closeadj above both SMAs on the evaluation day
+S-A,"Entry: close at a new 52-week high, volume >= 1.5x 50-day average",new 52-week high,"Friday close above the highest close of the prior 252 bars (closing basis), Friday volume >= 1.5x the 50-day average volume"
+S-A,3 weeks / week 8,weeks,15 and 40 trading days from the entry bar
+S-A,Take profit at +20%,take profit,"a limit at 1.20x entry, filled at the limit or the open if gapped above; reaching it inside 15 bars cancels the limit and switches to the 50-day SMA trailing exit"
+S-B,VCP breakout (GROWTH-001 H14) then a close above the pivot on volume >= 1.25x 50-day average,VCP + pivot,an H14 pattern day (close above the prior 20-day high after three successive 20-day contractions in ATR ratio and average volume) inside the evaluation week with that day's volume >= 1.25x the 50-day average; pivot = the prior 20-day high on that day; Friday close still above the pivot; the trend template checked on the Friday
+S-B,200-day SMA rising for >= 1 month,rising,SMA200 today above SMA200 22 trading days earlier
+S-B,RS percentile >= 70,RS,same 252-day return percent rank as S-A
+S-B,Trailing exit on the remainder,remainder,the 50-day and 20-day SMA exits apply only after the half sale at +14%; before it the 7% stop (and the 10% hard stop) are the only exits
+S-B,Close below 20-day SMA on above-average volume,above average,volume above the 50-day average
+S-C,Weekly bars,weekly,"Monday-to-Friday weeks from daily bars; close = last trading day, volume = sum"
+S-C,30-week SMA flattened or turned up,flattened,SMA30 this week >= SMA30 four weeks earlier
+S-C,Weekly volume >= 2x 26-week average,26-week average,26 weeks including the current one (TradingView ta.sma convention)
+S-C,RS vs SPY positive and rising,rising,26-week relative return above zero and above the prior week's value
+S-C,Stage 3/4 exit,SMA flat or declining,weekly close below SMA30 with SMA30 <= its value four weeks earlier
+S-C,Regime,SPY below its 30-week SMA,SPY weekly close (closeadj) below its 30-week SMA on the evaluation week: no new entries

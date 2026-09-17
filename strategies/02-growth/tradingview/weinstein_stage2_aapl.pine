@@ -1,0 +1,25 @@
+//@version=5
+// GROWTH-004 section 4 sanity check: S-C Weinstein Stage 2 on AAPL, weekly chart.
+// Cost model: 0.10% commission + 0.10% slippage per side folded into a 0.20% commission; slippage 0 ticks.
+strategy("GROWTH-004 S-C Weinstein sanity", overlay=true, initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+     commission_type=strategy.commission.percent, commission_value=0.2, slippage=0,
+     process_orders_on_close=false, calc_on_every_tick=false, pyramiding=0)
+startDate = input.time(timestamp("2010-01-01T00:00:00"), "Start")
+endDate   = input.time(timestamp("2019-12-31T23:59:00"), "End")
+inRange   = time >= startDate and time <= endDate
+sma30     = ta.sma(close, 30)
+spyClose  = request.security("AMEX:SPY", "W", close)
+spySma30  = request.security("AMEX:SPY", "W", ta.sma(close, 30))
+rs26      = (close / close[26]) / (spyClose / spyClose[26]) - 1
+baseHigh  = ta.highest(close[1], 26)
+vol26     = ta.sma(volume, 26)
+entrySig  = ta.crossover(close, sma30) and sma30 >= sma30[4] and close > baseHigh and volume >= 2 * vol26 and rs26 > 0 and rs26 > rs26[1] and spyClose > spySma30
+exitSig   = close < sma30 and sma30 <= sma30[4]
+if inRange and entrySig and strategy.position_size == 0
+    strategy.entry("L", strategy.long)
+if strategy.position_size > 0
+    strategy.exit("stop", "L", stop=strategy.position_avg_price * 0.90)
+    if exitSig
+        strategy.close("L", comment="stage3")
+plot(sma30, color=color.orange)

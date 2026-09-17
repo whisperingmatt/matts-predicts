@@ -616,6 +616,127 @@ winners lie along one axis (drawdown, momentum, volatility, size) and
 the two k-means halves are its ends, named "the crash rebound" and
 "the pullback in an uptrend". Chunk 4c ends with S9.
 
+## Chunk 5 — GROWTH-004 six systems backtested as written (spec dated 2026-09-17, S10 built 2026-09-17 AEST)
+
+2026-09-17 — Spec placed at specs/GROWTH-004-systems-backtest.md (root
+specs/, per CLAUDE.md). It takes priority over GROWTH-003 S9; S9 had
+already been built and merged (PR #11) before this spec arrived, so
+nothing was deferred in practice.
+
+2026-09-17 — Section 4 sanity check status: the engine leg is done
+(reports/engine_sanity.md: AAPL 2010-2019 crossover-week table, trade
+lists under both stop conventions, the supplementary ticker ACN, the
+Pine script at strategies/02-growth/tradingview/weinstein_stage2_aapl.pine
+and the exact TradingView settings). The TradingView leg cannot be run
+from Claude Code on the web; it is Matt's. Ruling: S-A, S-B and S-C
+were run and reported with the status PROVISIONAL, and no verdict
+stands until the AAPL (and ACN) trade lists reconcile. AAPL takes zero
+S-C trades in 2010-2019 under the rules as written (14 weekly
+crossovers, two clear the 26-week base, none reach twice the 26-week
+volume; the closest are 1.30x and 1.57x), so the AAPL check is a
+zero-trade and indicator-value comparison and ACN (one trade) tests
+the fills.
+
+2026-09-17 — Engine rulings (src/engine.py; section 1 as written
+except where noted):
+Prices: Sharadar open/high/low/close are split-adjusted and closeadj
+adds dividends (verified on the AAPL 2014 split). Systems trade on
+closeadj with open/high/low scaled by closeadj/close (G1). The sanity
+check trades on the split-adjusted raw series because that is
+TradingView's default; dividends off.
+Universe membership: a stock is eligible on a date when a universe row
+exists for the latest month end on or before it (point in time).
+Fills: signal on the close of the evaluation day, fill at the ticker's
+next bar open; an entry with no bar the next day fills at the ticker's
+next bar within five trading days, then lapses; a new evaluation
+replaces unfilled orders. Stops and limits fill intraday at the level,
+or at the open when the bar gaps through it (G3); same-bar fills of a
+just-entered position are allowed after the open.
+Costs: 0.10% commission each side plus 0.10% slippage when
+daily.marketcap on the fill day is >= $2,000M, else 0.25%; unknown
+market cap takes 0.25% (G2).
+Sizing: equity at the fill / slots, capped by cash, whole shares (G5).
+Candidate order when candidates exceed free slots: highest relative
+strength rank first, ties by ticker.
+Delisting while held: when a held ticker has no further bar in the
+data it is closed at its last close with small-cap slippage, reason
+"delisted" (a ticker symbol change ends the old symbol's bars the same
+way). Without this, dead tickers jammed every slot; found and fixed in
+S10 before any result was read.
+Open positions at 2025-06-30 are closed at the last close, reason
+end_of_test, kept in the statistics and flagged.
+Windows: one continuous run 2006-01 to 2025-06; a trade belongs to the
+window of its exit date; window CAGR and drawdown start from the
+equity at the previous window's last close (G7).
+Metrics (G8): expectancy for the pass test = net profit / capital
+deployed in the window's closed trade rows (per dollar); the plain
+mean of row returns is shown beside it and overstates systems with
+partial sales (S-B), because a half-position sale is its own row.
+Profit factor in dollars. CAGR from window start equity. Max drawdown
+and worst rolling 252-bar return on the daily equity curve. Sharpe =
+mean / std of daily returns x sqrt(252), rf 0. Turnover = yearly
+(buys + sells) / 2 over mean equity, averaged over the window's years.
+SPY buy-and-hold from funds closeadj over the same dates.
+Trades (G9): every closed row with entry and exit dates and fill
+prices, exit reason, P&L, return, holding days, plus the features.parquet
+lag-0 row at the latest month end on or before the entry, to
+data/processed/trades_<system>.parquet; core columns in
+reports/s10_trades_<system>.csv.
+Determinism (G10): no randomness; duckdb single-threaded; outputs
+checksum-identical across two consecutive runs.
+
+2026-09-17 — Rule substitutions (spec section 6; the same table is in
+reports/systems_part1.md and reports/s10_substitutions.csv):
+S-A C: ARQ eps (basic, split-adjusted) by filing date; YoY needs a
+positive year-ago quarter; "higher than the prior quarter's YoY"
+compares eps_q1 / eps_q5 on the same basis.
+S-A A: 12 trailing ARQ quarters summed into three years as the spec
+directs, which yields two annual growth rates, both >= 25% with
+positive bases; quarter spacing checked (q4 at 11-13 months, q8 at
+23-25, q11 at 32-34).
+S-A N: implied by the entry (a new 52-week closing high).
+S-A S: sharesbas now <= sharesbas eight quarters earlier, no tolerance.
+S-A L and S-B RS: percent rank of the 252-trading-day return among
+universe members on the evaluation day (not O'Neil's weighted rating).
+S-A I: features.parquet inst_pct > inst_pct_prev at the latest month
+end on or before the day (13F, 45-day lag); skipped before 2013-01-01;
+both segments reported (2006-2012 without, 2013-2019 with).
+S-A M: funds SPY closeadj above its 50- and 200-day SMAs on the day.
+S-A entry: Friday close above the highest close of the prior 252 bars
+(closing basis) with Friday volume >= 1.5x the 50-day average; fills
+Monday open. "3 weeks" = 15 trading days, "week 8" = 40 trading days.
+Take profit = a limit at 1.20x entry filled at the limit or the gapped
+open; reaching it inside 15 bars cancels the limit and switches to the
+50-day SMA trailing exit; the 50-day exit also applies after 40 bars.
+S-B VCP: an H14 pattern day (GROWTH-001: close above the prior 20-day
+high after three successive 20-day contractions in ATR ratio and
+average volume) inside the evaluation week with that day's volume
+>= 1.25x the 50-day average; pivot = that day's prior 20-day high;
+Friday close still above the pivot; the trend template on the Friday.
+"200-day SMA rising for >= 1 month" = SMA200 above its value 22 bars
+earlier. The 50-day and 20-day SMA exits apply only after the half
+sale at +14%; before it the 7% stop (and the 10% hard stop) are the
+only exits. "Above-average volume" = above the 50-day average.
+S-C: Monday-to-Friday weeks from daily bars (close = last trading day,
+volume = sum); "SMA flattened or turned up" = SMA30 >= SMA30 four
+weeks earlier; 26-week average volume includes the current week
+(TradingView ta.sma convention); "RS rising" = 26-week relative return
+above zero and above the prior week's; Stage 3/4 exit = weekly close
+below SMA30 with SMA30 <= its value four weeks earlier; regime = no
+new entries when SPY's weekly closeadj is below its 30-week SMA;
+10% protective stop evaluated daily in production and on weekly bars
+in the TradingView emulation.
+
+2026-09-17 — S10 result recorded (PROVISIONAL): all three FAIL the
+section 3 criteria in both windows. S-C Weinstein CAGR 3.9% build /
+5.6% holdout against SPY 9.2% / 14.3%, max drawdown -38% / -34%,
+expectancy per dollar positive in both. S-B Minervini CAGR -0.4% /
+1.6%, max drawdown -34% / -36%, 1,717 trade rows, expectancy per
+dollar about zero. S-A CANSLIM takes 74 trades in twenty years (95
+signals), sits in cash most of the time, CAGR 0.8% / -0.7%, max
+drawdown -6% / -8%. Ranking by holdout CAGR / max drawdown: S-C,
+S-B, S-A.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
