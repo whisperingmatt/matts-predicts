@@ -1,0 +1,163 @@
+sector,year,rows_,k300
+Basic Materials,2006,1705,46
+Basic Materials,2007,1794,0
+Basic Materials,2008,1639,11
+Basic Materials,2009,1447,70
+Basic Materials,2010,1717,0
+Basic Materials,2011,1779,2
+Basic Materials,2012,1670,8
+Basic Materials,2013,1677,0
+Basic Materials,2014,1684,0
+Basic Materials,2015,1593,6
+Basic Materials,2016,1617,11
+Basic Materials,2017,1684,0
+Basic Materials,2018,1638,0
+Basic Materials,2019,1534,13
+Communication Services,2006,1381,3
+Communication Services,2007,1478,0
+Communication Services,2008,1237,8
+Communication Services,2009,1017,18
+Communication Services,2010,1168,0
+Communication Services,2011,1163,11
+Communication Services,2012,1069,17
+Communication Services,2013,1208,1
+Communication Services,2014,1328,0
+Communication Services,2015,1335,9
+Communication Services,2016,1306,23
+Communication Services,2017,1225,17
+Communication Services,2018,1164,10
+Communication Services,2019,1119,34
+Consumer Cyclical,2006,4140,0
+Consumer Cyclical,2007,4089,1
+Consumer Cyclical,2008,3419,36
+Consumer Cyclical,2009,2960,134
+Consumer Cyclical,2010,3289,11
+Consumer Cyclical,2011,3281,25
+Consumer Cyclical,2012,3302,17
+Consumer Cyclical,2013,3595,11
+Consumer Cyclical,2014,3824,0
+Consumer Cyclical,2015,3927,8
+Consumer Cyclical,2016,3874,36
+Consumer Cyclical,2017,3773,14
+Consumer Cyclical,2018,3717,11
+Consumer Cyclical,2019,3542,127
+Consumer Defensive,2006,1525,2
+Consumer Defensive,2007,1560,0
+Consumer Defensive,2008,1473,7
+Consumer Defensive,2009,1459,18
+Consumer Defensive,2010,1567,0
+Consumer Defensive,2011,1518,0
+Consumer Defensive,2012,1413,12
+Consumer Defensive,2013,1440,0
+Consumer Defensive,2014,1501,0
+Consumer Defensive,2015,1499,3
+Consumer Defensive,2016,1468,8
+Consumer Defensive,2017,1419,4
+Consumer Defensive,2018,1379,3
+Consumer Defensive,2019,1331,10
+Energy,2006,2052,1
+Energy,2007,2262,0
+Energy,2008,2341,17
+Energy,2009,2138,88
+Energy,2010,2303,10
+Energy,2011,2377,2
+Energy,2012,2260,9
+Energy,2013,2399,0
+Energy,2014,2600,0
+Energy,2015,2290,1
+Energy,2016,2154,18
+Energy,2017,2110,0
+Energy,2018,2150,0
+Energy,2019,1704,2
+Financial Services,2006,4606,3
+Financial Services,2007,4931,0
+Financial Services,2008,4333,2
+Financial Services,2009,3343,20
+Financial Services,2010,3503,2
+Financial Services,2011,3571,3
+Financial Services,2012,3596,1
+Financial Services,2013,3976,7
+Financial Services,2014,4383,0
+Financial Services,2015,4601,1
+Financial Services,2016,4678,8
+Financial Services,2017,5038,8
+Financial Services,2018,4895,7
+Financial Services,2019,4746,19
+Healthcare,2006,4195,14
+Healthcare,2007,4224,2
+Healthcare,2008,3581,28
+Healthcare,2009,3226,37
+Healthcare,2010,3343,59
+Healthcare,2011,3234,64
+Healthcare,2012,3198,73
+Healthcare,2013,3468,76
+Healthcare,2014,3923,28
+Healthcare,2015,4475,20
+Healthcare,2016,4315,134
+Healthcare,2017,4495,50
+Healthcare,2018,4781,76
+Healthcare,2019,4741,183
+Industrials,2006,4497,17
+Industrials,2007,4713,0
+Industrials,2008,4337,15
+Industrials,2009,3927,91
+Industrials,2010,4128,8
+Industrials,2011,4106,4
+Industrials,2012,3916,18
+Industrials,2013,4073,4
+Industrials,2014,4175,0
+Industrials,2015,4105,1
+Industrials,2016,3967,5
+Industrials,2017,4115,0
+Industrials,2018,4149,4
+Industrials,2019,4091,47
+Real Estate,2006,163,0
+Real Estate,2007,140,0
+Real Estate,2008,92,0
+Real Estate,2009,83,3
+Real Estate,2010,93,1
+Real Estate,2011,118,3
+Real Estate,2012,173,0
+Real Estate,2013,186,0
+Real Estate,2014,179,0
+Real Estate,2015,187,0
+Real Estate,2016,173,0
+Real Estate,2017,174,0
+Real Estate,2018,198,4
+Real Estate,2019,205,10
+Technology,2006,5438,0
+Technology,2007,4956,2
+Technology,2008,4370,40
+Technology,2009,3898,82
+Technology,2010,4361,10
+Technology,2011,4437,12
+Technology,2012,4050,25
+Technology,2013,4273,12
+Technology,2014,4449,7
+Technology,2015,4384,27
+Technology,2016,4165,31
+Technology,2017,4138,14
+Technology,2018,4151,61
+Technology,2019,4249,156
+Unknown,2006,21,0
+Unknown,2007,15,0
+Unknown,2008,10,0
+Unknown,2010,3,0
+Unknown,2011,3,0
+Unknown,2014,2,0
+Unknown,2016,2,0
+Unknown,2017,5,0
+Utilities,2006,1029,0
+Utilities,2007,1054,0
+Utilities,2008,1029,0
+Utilities,2009,1003,0
+Utilities,2010,1011,0
+Utilities,2011,977,0
+Utilities,2012,922,0
+Utilities,2013,917,0
+Utilities,2014,932,0
+Utilities,2015,967,0
+Utilities,2016,958,0
+Utilities,2017,905,0
+Utilities,2018,863,0
+Utilities,2019,820,0

@@ -297,6 +297,48 @@ its 2007 high until 2012), so months-since-trough there is 31, not the
 the month end, fetched to data/raw/VIX_History.csv. Buckets as the spec
 lists; no VIX bucket is specified, so the raw close is stored.
 
+2026-09-17 — S4 statistics definitions (spec section 7 plus Matt's S4
+brief; implemented in src/stats.py):
+Lift among non-null rows: for a flag at a lag, the cell's rows are the
+build-window universe rows where the flag is non-null; base = launches
+over those rows; rate = launches over flag-TRUE rows; lift = rate/base.
+Coverage (non-null rows over all rows) is reported beside every lift.
+Reason: a null is "data insufficient", not "signal absent"; comparing
+against a base that includes nulls would mix the two.
+Confidence interval: 95% Wilson on rate with n = flag-TRUE rows,
+divided by base, which is treated as fixed because it rests on the
+whole non-null set. Alternatives rejected: a ratio CI (adds width the
+base's sample size does not justify); a normal approximation (poor at
+the low rates here).
+D8 "events" = launch events: launches among flag-TRUE rows for a lift
+cell, launches inside the bucket for a base-rate cell. Both counts are
+printed so the reader can see how far a cell falls short.
+PASS/CRASH-ONLY as section 7 states, on launch_300. CRASH-ONLY is
+judged across all lags: passes overall at some lag, but no (lag,
+drawdown bucket 0-10 or 10-20) cell passes.
+Combinations (7.4): formed within one lag from the flags that clear
+lift >= 1.5 and >= 100 events at that lag, so every flag in a
+combination is as of the same decision date. Controls are eligible on
+the same terms. Coverage of a combination ("catch") = launches caught
+over all launches at that lag; the non-null share is shown beside it.
+launch_200 and launch_500 rates are shown for the same combinations.
+Expected winners (Matt's addition): for the top ten D8-passing
+combinations, per regime bucket, 10 x bucket base rate x the
+combination's overall lift. The bucket base rate needs >= 100 launches
+(D8). This assumes lift does not vary by regime; the 7.3 tables are the
+check on that assumption.
+Sector x entry-year table (Matt's addition): launch_300 rate per
+(sector, year) cell with D8 per cell, plus the row and column sums of
+the same cells so the reader sees where D8 is met at the margin. Rows
+with no sector in the tickers table are "Unknown" (61 universe rows).
+Regime bucket of a row is the decision month's bucket (month_end), at
+every lag; the lagged feature value is combined with the regime the
+decision is made in.
+The report's plain-prose reading lives in reports/build_window_reading.md
+and is inserted verbatim when the report is regenerated, so numbers can
+be regenerated without retyping the prose. It contains no
+recommendations (7.6).
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).

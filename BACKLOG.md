@@ -57,7 +57,26 @@ month).
 
 S4 — Build-window statistics (section 7) and
 reports/build_window_results.md. No recommendations. Wrap.
-Status: TODO.
+Status: DONE (verified) 2026-09-17. src/stats.py computes 7.1–7.5 plus
+Matt's three additions (sector x entry-year table, base rate per
+regime bucket, expected winners per ten picks). Lift among non-null
+rows with coverage beside it; Wilson CI; D8 in launch events
+everywhere. Verdicts on launch_300: PASS h9_rs6_top_decile (lags 3, 6,
+12), h9_rs12_top_decile (3, 6, 12), h10_sponsorship (all lags; data
+from 2014 only, no crisis-regime cells). Everything else FAIL or
+insufficient (h13_stage2). 69 combinations evaluated, 5 meet D8; best
+is rs6 AND rs12 at lag 12, lift 2.87 [2.54, 3.25], 247 events, catches
+9.5% of launches. Full tables in reports/build_window_results.md and
+reports/s4_*.csv; reading in reports/build_window_reading.md.
+Definitions in decisions.md "S4 statistics definitions".
+Note for S5: session startup is fetch_bulk, ingest, universe, labels,
+regime, features, stats (about twelve minutes). stats.py reads only
+build-window rows; S5 needs a holdout mode that reruns 7.1–7.5 on
+2020-01 to 2026-06 for the passing signals and the top-20
+combinations only, per section 8, and its CONFIRM rule (lift >= 1.5,
+lower CI >= 1.0). Labels past 2024-06 are null (24 months not yet
+observable), so the holdout effectively ends at 2024-06 decision
+dates; record that when S5 opens it.
 
 S5 — Holdout (section 8) and reports/holdout_results.md. Only after
 the S4 wrap is committed. Wrap.
