@@ -66,8 +66,15 @@ defaults to 10000 with skip for paging; years=full gives a bulk CSV
 zip; format=json returns large integers as strings, format=csv does
 not.
 Claude Code on the web (this environment) can reach api.sharadar.com
-but cannot reach sharadar.com (docs) or data.nasdaq.com — the egress
-proxy returns 403 on CONNECT for those two. Verified 2026-09-17.
+but cannot reach sharadar.com (docs), data.nasdaq.com, or
+static-sharadar.nyc3.digitaloceanspaces.com (where api.sharadar.com
+redirects bulk years=full downloads) — the egress proxy returns 403 on
+CONNECT for those three. Bulk files cannot be pulled here until the
+environment's network policy allows that host. The paged API is capped
+at 100,000 rows per request. Verified 2026-09-17.
+data/ does not persist between cloud sessions; the container is
+ephemeral. Run src/fetch_bulk.py then src/ingest.py at the start of any
+session that needs data (decisions.md 2026-09-17).
 The daily table has no short-interest field (ev, evebit, evebitda,
 marketcap, pb, pe, ps only). H12 short_fuel is unavailable from
 Sharadar. Verified 2026-09-17 against sharadar.com/docs/daily and a

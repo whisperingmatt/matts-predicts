@@ -21,11 +21,19 @@ S2 — Ingest (fundamentals ARQ, stocks, daily, tickers, insiders,
 holdings, sp500 — direct-API names; NDL names in decisions.md),
 universe.parquet, labels, base rate. Stop if no delistings in the
 price table. Stop if base rate is outside 0.5%–5%. Wrap.
-Status: TODO. Unblocked 2026-09-17 (auth test PASS). Not started;
-Matt said not to start S2 in the S1b session. Before starting: every
-pull must set from= and to= (the API defaults to the trailing year),
-and full-table pulls should use years=full bulk CSV rather than paging
-10000 rows at a time.
+Status: IN PROGRESS, BLOCKED 2026-09-17 on network policy. Done and
+committed: persistence ruling (data/ does not persist between cloud
+sessions), src/fetch_bulk.py (bulk Full History setup script, verified
+up to the redirect), src/ingest.py (zip to parquet converter, verified
+on a 74,195-row tickers fixture), config.BULK_TABLES adds funds. Not
+done: the bulk downloads themselves, universe.parquet, labels, base
+rates, delisting check, holdings 2013 note. Blocker: api.sharadar.com
+redirects years=full to static-sharadar.nyc3.digitaloceanspaces.com
+and the web environment's egress proxy refuses that host (403).
+Options for Matt, in the S2 wrap: allow that host in the environment's
+network policy; or run fetch_bulk.py on his machine; or approve a
+paged-API pull (~3,000 requests, 2–3 hours). Next S2 session resumes
+at the download step once one is chosen.
 
 S3 — Features (spec section 5) at T-0, T-3, T-6, T-12 and regime
 tags (section 6). Write the point-in-time unit test from section 10
