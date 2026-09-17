@@ -1,0 +1,2 @@
+ticker,signal_date,entry_date,entry_price,shares,exit_date,exit_price,exit_reason,pnl,ret,holding_days,bars_held,partial,rank,notional_in,notional_out
+ACN,2016-09-30,2016-10-03,121.71158999999999,820,2017-01-23,114.66522,stage3_close_below_sma30,-5971.852384199985,-0.059776323180572355,112,76,False,0.004486574516405772,99803.50379999999,94025.4804

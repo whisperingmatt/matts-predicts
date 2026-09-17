@@ -183,3 +183,31 @@ reports/winner_types.md alongside the four earlier reports.
 Startup for a fresh container: fetch_bulk, ingest (includes events),
 universe, labels, regime, features, labels12, decile, anatomy,
 winner_types (~17 min).
+
+## Chunk 5 — GROWTH-004 six systems backtested as written (specs/GROWTH-004-systems-backtest.md)
+
+S10 — Engine (section 1), sanity check (section 4), systems S-A, S-B,
+S-C. reports/engine_sanity.md, reports/systems_part1.md. Wrap, PR.
+Status: BUILT AND VERIFIED IN THE ENGINE, PROVISIONAL ON THE SPEC
+2026-09-17. src/engine.py (data prep to bars/weekly/spy parquet, daily
+event loop, metrics, trades with the feature row at entry) and
+src/systems_part1.py. The TradingView leg of section 4 is Matt's:
+paste strategies/02-growth/tradingview/weinstein_stage2_aapl.pine on
+NASDAQ:AAPL weekly, then NYSE:ACN, and fill the reconciliation table
+in reports/engine_sanity.md. AAPL takes zero S-C trades 2010-2019 as
+written; the engine's crossover-week table is what to compare. Three
+engine fills were checked to the cent against the bars. All three
+systems FAIL section 3 in both windows (provisional). Rulings and the
+substitution table in decisions.md "Chunk 5".
+
+S11 — S-D Clenow (S&P 500 point-in-time from the sp500 table, and the
+full universe), S-E Gray & Vogel (50 and 10 positions), S-F Greenblatt
+(control). reports/systems_scoreboard.md with the full board, per-year
+tables and a plain-prose reading. Wrap, PR. Chunk 5 ends; GROWTH-005
+follows. Do not start until Matt's brief and the TradingView
+reconciliation.
+Startup for a fresh container: fetch_bulk, ingest, universe, labels,
+regime, features, labels12, decile, anatomy (S8 fields are not needed
+for S10 but the sequence is the repo's standard), then
+`python -m src.systems_part1` (builds bars.parquet in ~4.5 minutes,
+then runs in ~40 seconds).
