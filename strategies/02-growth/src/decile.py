@@ -1,7 +1,7 @@
 """S6 — GROWTH-002 decile retest, build window (spec sections 1 to 4, S6 half).
 
 Input:  data/processed/features.parquet (with the six raw columns appended
-        2026-09-18), labels12.parquet (E1), labels.parquet (launch_300
+        2026-09-17), labels12.parquet (E1), labels.parquet (launch_300
         reference), regime.parquet
 Output: data/processed/deciles.parquet — decile rank per feature per
         (ticker, month_end, lag), every month (ranks are within month and

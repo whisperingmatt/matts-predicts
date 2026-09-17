@@ -25,7 +25,7 @@ src/labels12.py builds the 12-month labels (E1) exactly as labels.py builds the 
 - strategies/02-growth/reports/holdout_results.md, s5_single_signal.csv (regenerated: one row moved in two h10 cells)
 - decisions.md (Chunk 4b section: spec placement, feature extension and definitions, labels, decile tie rule, pass reading, composite; determinism fix)
 - BACKLOG.md (Chunk 4b section: S6 DONE, S7 TODO)
-- docs/wrapits/WRAPIT_2026-09-17-1810_s6-decile-build.md (this file)
+- docs/wrapits/WRAPIT_2026-09-17-1750_s6-decile-build.md (this file)
 - data/processed/features.parquet (56 columns), labels12.parquet, deciles.parquet (gitignored, regenerable)
 
 ## Environment Variables [MANDATORY]
