@@ -123,12 +123,22 @@ built from the top 3 by extreme-decile lift, UNCONFIRMED, decile 10 =
 4b". Reading in reports/decile_build_reading.md.
 
 S7 — Holdout single-feature and composite on 2020-01 to 2025-06.
-reports/decile_holdout_results.md with a plain-prose reading: which
-features confirmed, composite holdout lift, candidate pool size,
-expected win_50 per 10 picks by regime. Wrap, PR. Ends chunk 4b.
-Status: TODO. Blocked until the S6 wrap is merged. Note: with no
-build-window pass on win_50, section 3's PASS (build AND holdout)
-cannot be met by any feature; S7 reports holdout lifts for the record
-and the unconfirmed composite's holdout behavior.
-Session startup: fetch_bulk, ingest, universe, labels, regime,
-features, labels12, decile (about twelve minutes).
+reports/decile_holdout_results.md with a plain-prose reading. Wrap,
+PR. Ends chunk 4b.
+Status: DONE (verified) 2026-09-17. src/decile_holdout.py on the
+parametrized src/decile.py. Holdout 164,889 rows per lag, win_50
+16.98%, win_100 5.84%; launch_300 observable through 2024-08 only and
+counted on observable rows. No feature passes the full section 3
+criterion on win_50, as expected; CONFIRMED on win_100: marketcap
+(all lags), peg and pegy (lags 0, 3); on launch_300: marketcap (all
+lags). Composite (Matt's S7 recipe: mean of raw percentile ranks;
+unconfirmed top-3 membership): holdout decile 10 = 6.1% of rows,
+win_50 lift 1.16 [1.11, 1.21], win_100 1.41. Exploratory realized
+volatility deciles reported outside the pass criteria with their
+correlation to marketcap (-0.47 to -0.51), pct_from_52w_high (+0.48
+to +0.54), share_count_change_8q (+0.32 to +0.41). The S6 build
+report was regenerated under the S7 composite recipe. Rulings in
+decisions.md "S7 holdout rulings".
+Chunk 4b ends here. No further build session in this repo until chat
+produces a new spec; both decile reports plus the two GROWTH-001
+reports are the inputs.

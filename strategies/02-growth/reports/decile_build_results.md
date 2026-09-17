@@ -33,7 +33,7 @@ This section reads the build-window tables below (2006-01 to 2019-12) under GROW
 
 **Regime.** For win_50 the calm bucket (drawdown under 10%) holds most events and the deep-drawdown bucket reverses momentum: the top strength decile is 1.45 in calm months and 0.53 in months deeper than 30% below the high. Small caps and low PE-versus-history keep their direction in every bucket (1.20 to 1.67 in the deep-drawdown bucket). The ownership-change feature has no events beyond the 10% bucket because holdings start in 2013.
 
-**The composite is unconfirmed by construction.** With no win_50 pass, section 4's fallback applies: the top three by extreme-decile lift on win_50 are ret_12m_skip1, pe_vs_5y_median, and inst_pct_delta_qoq. Their mean oriented decile is non-null for 29% of rows (the ownership term limits it to 2014 onward), and because a mean of three integer deciles has few distinct values, the tie rule puts only 2.4% of universe rows in composite decile 10 and 7.5% in deciles 8 to 10; that is the candidate-pool size the spec asks for. On win_50 the top decile lifts 1.12 [1.05, 1.20] and deciles 8 to 10 the same 1.12; on win_100 the top decile reaches 1.72 [1.47, 2.01] on 154 events, rising to 1.91 at lag 12; on launch_300 the top decile has 42 events and cannot be read. The composite adds nothing over its best member on win_50 and is entirely a calm-market object: every regime bucket beyond 10% drawdown is empty for it.
+**The composite is unconfirmed by construction.** With no win_50 pass, section 4's fallback applies: the top three by extreme-decile lift on win_50 are ret_12m_skip1, pe_vs_5y_median, and inst_pct_delta_qoq. The recipe is the mean of the three oriented raw percentile ranks (Matt's S7 ruling, replacing the S6 mean of integer deciles, whose few distinct values left 2.4% of rows in decile 10), ranked into deciles per month and lag. The score is non-null for 29% of rows because the ownership term starts in 2014, so composite decile 10 holds 2.9% of all universe rows and deciles 8 to 10 hold 8.8%; that is the candidate-pool size the spec asks for. On win_50 the top decile lifts 1.12 [1.06, 1.19] on 957 events and deciles 8 to 10 lift 1.09; on win_100 the top decile reaches 1.50 [1.30, 1.75] on 167 events; on launch_300 it has 48 events and cannot be read. The composite adds nothing over its best member on win_50 and is a calm-market object: every regime bucket beyond 10% drawdown is empty for it.
 
 **What this report does not say.** It does not rank features for use; S7 holds the other half of every pass criterion. It does not re-declare the three backward features, which E6 forbids. It does not correct for 22 features times 4 lags times 3 labels of cells. Its one clean, declared-direction, monotone finding is size, and size does not clear the win_50 bar.
 
@@ -537,54 +537,54 @@ Cell = lift (events); insufficient cells show the event count only.
 ## Composite (section 4)
 
 Fewer than 3 features PASS-build on win_50; composite built from the top 3 by extreme-decile lift, UNCONFIRMED: ret_12m_skip1, pe_vs_5y_median, inst_pct_delta_qoq.
-Composite = mean oriented decile (11 - decile for LOW features) over rows where every member is non-null,
-ranked into deciles per (month_end, lag). pool share = rows in the cell / all universe rows at that lag.
+Composite = mean oriented raw percentile rank (1 - rank for LOW features) over rows where every member is
+non-null, ranked into deciles per (month_end, lag). pool share = rows in the cell / all universe rows at that lag.
 
 | lag | label | cell | coverage | pool share | rows | events | rate | lift | CI low | CI high |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 0 | win_50 | decile 10 | 29.2% | 2.4% | 9,341 | 771 | 8.25% | 1.12 | 1.05 | 1.20 |
-| 0 | win_50 | deciles 8-10 | 29.2% | 7.5% | 29,326 | 2417 | 8.24% | 1.12 | 1.08 | 1.16 |
-| 0 | win_100 | decile 10 | 29.2% | 2.4% | 9,341 | 154 | 1.65% | 1.72 | 1.47 | 2.01 |
-| 0 | win_100 | deciles 8-10 | 29.2% | 7.5% | 29,326 | 380 | 1.30% | 1.35 | 1.22 | 1.49 |
-| 0 | launch_300 | decile 10 | 29.2% | 2.4% | 9,341 | 42 | insufficient | insufficient | insufficient | insufficient |
-| 0 | launch_300 | deciles 8-10 | 29.2% | 7.5% | 29,326 | 100 | 0.34% | 1.40 | 1.15 | 1.70 |
-| 3 | win_50 | decile 10 | 27.8% | 2.2% | 8,719 | 781 | 8.96% | 1.18 | 1.10 | 1.26 |
-| 3 | win_50 | deciles 8-10 | 27.8% | 7.1% | 27,917 | 2343 | 8.39% | 1.11 | 1.06 | 1.15 |
-| 3 | win_100 | decile 10 | 27.8% | 2.2% | 8,719 | 119 | 1.36% | 1.37 | 1.15 | 1.64 |
-| 3 | win_100 | deciles 8-10 | 27.8% | 7.1% | 27,917 | 354 | 1.27% | 1.28 | 1.15 | 1.42 |
-| 3 | launch_300 | decile 10 | 27.8% | 2.2% | 8,719 | 40 | insufficient | insufficient | insufficient | insufficient |
-| 3 | launch_300 | deciles 8-10 | 27.8% | 7.1% | 27,917 | 107 | 0.38% | 1.57 | 1.30 | 1.90 |
-| 6 | win_50 | decile 10 | 26.4% | 2.1% | 8,376 | 776 | 9.26% | 1.21 | 1.13 | 1.29 |
-| 6 | win_50 | deciles 8-10 | 26.4% | 6.6% | 26,150 | 2233 | 8.54% | 1.11 | 1.07 | 1.16 |
-| 6 | win_100 | decile 10 | 26.4% | 2.1% | 8,376 | 148 | 1.77% | 1.72 | 1.47 | 2.02 |
-| 6 | win_100 | deciles 8-10 | 26.4% | 6.6% | 26,150 | 364 | 1.39% | 1.36 | 1.23 | 1.50 |
-| 6 | launch_300 | decile 10 | 26.4% | 2.1% | 8,376 | 52 | insufficient | insufficient | insufficient | insufficient |
-| 6 | launch_300 | deciles 8-10 | 26.4% | 6.6% | 26,150 | 111 | 0.42% | 1.67 | 1.39 | 2.01 |
-| 12 | win_50 | decile 10 | 23.6% | 1.9% | 7,522 | 761 | 10.12% | 1.28 | 1.20 | 1.37 |
-| 12 | win_50 | deciles 8-10 | 23.6% | 6.1% | 23,958 | 2122 | 8.86% | 1.12 | 1.08 | 1.17 |
-| 12 | win_100 | decile 10 | 23.6% | 1.9% | 7,522 | 155 | 2.06% | 1.91 | 1.63 | 2.23 |
-| 12 | win_100 | deciles 8-10 | 23.6% | 6.1% | 23,958 | 371 | 1.55% | 1.43 | 1.30 | 1.58 |
-| 12 | launch_300 | decile 10 | 23.6% | 1.9% | 7,522 | 51 | insufficient | insufficient | insufficient | insufficient |
-| 12 | launch_300 | deciles 8-10 | 23.6% | 6.1% | 23,958 | 98 | insufficient | insufficient | insufficient | insufficient |
+| 0 | win_50 | decile 10 | 29.2% | 2.9% | 11,542 | 957 | 8.29% | 1.12 | 1.06 | 1.19 |
+| 0 | win_50 | deciles 8-10 | 29.2% | 8.8% | 34,536 | 2777 | 8.04% | 1.09 | 1.05 | 1.13 |
+| 0 | win_100 | decile 10 | 29.2% | 2.9% | 11,542 | 167 | 1.45% | 1.51 | 1.29 | 1.75 |
+| 0 | win_100 | deciles 8-10 | 29.2% | 8.8% | 34,536 | 422 | 1.22% | 1.27 | 1.16 | 1.40 |
+| 0 | launch_300 | decile 10 | 29.2% | 2.9% | 11,542 | 48 | insufficient | insufficient | insufficient | insufficient |
+| 0 | launch_300 | deciles 8-10 | 29.2% | 8.8% | 34,536 | 108 | 0.31% | 1.28 | 1.06 | 1.55 |
+| 3 | win_50 | decile 10 | 27.8% | 2.8% | 10,992 | 970 | 8.82% | 1.16 | 1.10 | 1.24 |
+| 3 | win_50 | deciles 8-10 | 27.8% | 8.4% | 32,881 | 2717 | 8.26% | 1.09 | 1.05 | 1.13 |
+| 3 | win_100 | decile 10 | 27.8% | 2.8% | 10,992 | 140 | 1.27% | 1.28 | 1.09 | 1.51 |
+| 3 | win_100 | deciles 8-10 | 27.8% | 8.4% | 32,881 | 394 | 1.20% | 1.21 | 1.09 | 1.33 |
+| 3 | launch_300 | decile 10 | 27.8% | 2.8% | 10,992 | 43 | insufficient | insufficient | insufficient | insufficient |
+| 3 | launch_300 | deciles 8-10 | 27.8% | 8.4% | 32,881 | 108 | 0.33% | 1.35 | 1.12 | 1.63 |
+| 6 | win_50 | decile 10 | 26.4% | 2.6% | 10,407 | 951 | 9.14% | 1.19 | 1.12 | 1.26 |
+| 6 | win_50 | deciles 8-10 | 26.4% | 7.9% | 31,138 | 2608 | 8.38% | 1.09 | 1.05 | 1.13 |
+| 6 | win_100 | decile 10 | 26.4% | 2.6% | 10,407 | 180 | 1.73% | 1.69 | 1.46 | 1.95 |
+| 6 | win_100 | deciles 8-10 | 26.4% | 7.9% | 31,138 | 406 | 1.30% | 1.27 | 1.16 | 1.40 |
+| 6 | launch_300 | decile 10 | 26.4% | 2.6% | 10,407 | 56 | insufficient | insufficient | insufficient | insufficient |
+| 6 | launch_300 | deciles 8-10 | 26.4% | 7.9% | 31,138 | 126 | 0.40% | 1.59 | 1.34 | 1.89 |
+| 12 | win_50 | decile 10 | 23.6% | 2.4% | 9,299 | 917 | 9.86% | 1.25 | 1.18 | 1.33 |
+| 12 | win_50 | deciles 8-10 | 23.6% | 7.1% | 27,826 | 2459 | 8.84% | 1.12 | 1.08 | 1.16 |
+| 12 | win_100 | decile 10 | 23.6% | 2.4% | 9,299 | 185 | 1.99% | 1.84 | 1.60 | 2.12 |
+| 12 | win_100 | deciles 8-10 | 23.6% | 7.1% | 27,826 | 412 | 1.48% | 1.37 | 1.24 | 1.51 |
+| 12 | launch_300 | decile 10 | 23.6% | 2.4% | 9,299 | 55 | insufficient | insufficient | insufficient | insufficient |
+| 12 | launch_300 | deciles 8-10 | 23.6% | 7.1% | 27,826 | 107 | 0.38% | 1.43 | 1.18 | 1.72 |
 
 ### Composite by SPY drawdown bucket, lag 0
 
 | label | cell | 0-10 | 10-20 | 20-30 | >30 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| win_50 | decile 10 | 1.12 [1.05, 1.20] (749) | insufficient (22) | insufficient (0) | insufficient (0) |
-| win_50 | deciles 8-10 | 1.12 [1.07, 1.16] (2327) | insufficient (90) | insufficient (0) | insufficient (0) |
-| win_100 | decile 10 | 1.74 [1.49, 2.04] (152) | insufficient (2) | insufficient (0) | insufficient (0) |
-| win_100 | deciles 8-10 | 1.37 [1.24, 1.51] (373) | insufficient (7) | insufficient (0) | insufficient (0) |
-| launch_300 | decile 10 | insufficient (40) | insufficient (2) | insufficient (0) | insufficient (0) |
-| launch_300 | deciles 8-10 | insufficient (97) | insufficient (3) | insufficient (0) | insufficient (0) |
+| win_50 | decile 10 | 1.13 [1.06, 1.20] (927) | insufficient (30) | insufficient (0) | insufficient (0) |
+| win_50 | deciles 8-10 | 1.09 [1.05, 1.13] (2684) | insufficient (93) | insufficient (0) | insufficient (0) |
+| win_100 | decile 10 | 1.51 [1.30, 1.76] (163) | insufficient (4) | insufficient (0) | insufficient (0) |
+| win_100 | deciles 8-10 | 1.29 [1.17, 1.42] (415) | insufficient (7) | insufficient (0) | insufficient (0) |
+| launch_300 | decile 10 | insufficient (46) | insufficient (2) | insufficient (0) | insufficient (0) |
+| launch_300 | deciles 8-10 | 1.28 [1.05, 1.54] (105) | insufficient (3) | insufficient (0) | insufficient (0) |
 
 ### Composite by months-since-trough bucket, lag 0
 
 | label | cell | 0-12 | 13-24 | >24 |
 | --- | --- | ---: | ---: | ---: |
-| win_50 | decile 10 | 1.12 [1.04, 1.20] (758) | insufficient (13) | insufficient (0) |
-| win_50 | deciles 8-10 | 1.12 [1.08, 1.16] (2378) | insufficient (39) | insufficient (0) |
-| win_100 | decile 10 | 1.71 [1.46, 2.00] (152) | insufficient (2) | insufficient (0) |
-| win_100 | deciles 8-10 | 1.35 [1.22, 1.49] (375) | insufficient (5) | insufficient (0) |
-| launch_300 | decile 10 | insufficient (42) | insufficient (0) | insufficient (0) |
-| launch_300 | deciles 8-10 | 1.40 [1.15, 1.70] (100) | insufficient (0) | insufficient (0) |
+| win_50 | decile 10 | 1.13 [1.06, 1.20] (940) | insufficient (17) | insufficient (0) |
+| win_50 | deciles 8-10 | 1.09 [1.05, 1.13] (2731) | insufficient (46) | insufficient (0) |
+| win_100 | decile 10 | 1.51 [1.30, 1.75] (165) | insufficient (2) | insufficient (0) |
+| win_100 | deciles 8-10 | 1.27 [1.15, 1.40] (416) | insufficient (6) | insufficient (0) |
+| launch_300 | decile 10 | insufficient (48) | insufficient (0) | insufficient (0) |
+| launch_300 | deciles 8-10 | 1.29 [1.06, 1.55] (108) | insufficient (0) | insufficient (0) |

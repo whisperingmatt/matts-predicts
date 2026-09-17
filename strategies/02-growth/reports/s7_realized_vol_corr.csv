@@ -1,0 +1,7 @@
+window,feature,spearman_on_deciles,rows
+build,marketcap,-0.5090623080438017,389272
+build,pct_from_52w_high,0.4842859472661929,390504
+build,share_count_change_8q,0.3202537604815588,370791
+holdout,marketcap,-0.4738515246180081,162709
+holdout,pct_from_52w_high,0.5422929629324656,163110
+holdout,share_count_change_8q,0.40452907224694934,155922

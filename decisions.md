@@ -456,6 +456,42 @@ the S5 holdout report moved by one row in two h10 cells (rows_true
 7,693 to 7,692 at lag 3 and 7,618 to 7,617 at lag 6) with no lift,
 CI, or verdict change. Regenerated and committed with S6.
 
+2026-09-17 — S7 holdout rulings (Matt's S7 brief; implemented in
+src/decile_holdout.py with src/decile.py reused):
+Composite recipe: mean of raw percentile ranks (1 - rank for LOW
+features) over rows where every member is non-null, then deciles per
+(month_end, lag) with the tie rule. Supersedes the S6 recipe (mean of
+integer deciles), whose few distinct values left 2.4% of rows in
+decile 10. Applied in both windows; the S6 build report and its
+reading were regenerated under this recipe so the repo carries one
+composite. Membership unchanged: the unconfirmed top 3 by build
+extreme-decile lift on win_50 (no feature passed).
+Holdout window 2020-01 to 2025-06 (E4). 12-month labels are observable
+through 2025-08; launch_300 (24-month) only through 2024-08, so every
+launch_300 cell in the holdout counts only rows whose label is
+observable (rows 2024-09 onward are excluded from that label's rows
+and base, not treated as non-events).
+CONFIRMED on a label = a lag where the build extreme cell PASS-build
+(lift >= 1.5, lower bound >= 1.2, Spearman with the declared sign) and
+the holdout extreme cell has lift >= 1.5 with lower bound >= 1.2 on
+>= 100 events; section 3 asks "the same in the holdout" for lift and
+CI and puts the monotonicity test in the build window only.
+Expected win_50 per ten picks by regime = 10 x holdout bucket base
+rate x the composite cell's overall holdout lift at lag 0 (the spec's
+S7 formula), for decile 10 and deciles 8-10; insufficient where the
+bucket has under 100 wins or the composite cell under 100 events.
+Exploratory realized volatility (outside every pass criterion, no
+declared direction): annualized standard deviation of daily log
+closeadj returns over the 252 trading days ending on the row's trade
+date, null with fewer; ranked like the other features; lifts on all
+three labels in both windows; "Spearman with marketcap,
+pct_from_52w_high, share_count_change_8q" computed as the correlation
+of the two decile ranks over rows where both are non-null, lag 0, per
+window. Recorded as a description, never a verdict.
+Chunk 4b ends with S7. The spec's S7 reading covers confirmed
+features, composite holdout lift, candidate pool size, and expected
+win_50 per ten picks by regime.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
