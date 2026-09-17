@@ -18,6 +18,10 @@ API_KEY_ENV_FALLBACK = "NASDAQ_DATA_LINK_API_KEY"
 # sp500=SP500. Verified against sharadar.com/docs 2026-09-17.
 TABLES = ["tickers", "fundamentals", "stocks", "daily", "insiders", "holdings", "sp500"]
 
+# Bulk files pulled by src/fetch_bulk.py (Full History). funds is added for
+# S3 regime tags (SPY) and H16 (sector SPDRs); it is not an S1 check table.
+BULK_TABLES = [*TABLES, "funds"]
+
 # D4 — windows
 BUILD_START, BUILD_END = "2006-01-31", "2019-12-31"
 HOLDOUT_START, HOLDOUT_END = "2020-01-31", "2026-06-30"

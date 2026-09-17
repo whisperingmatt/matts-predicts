@@ -115,6 +115,32 @@ AAPL is the public sample. Only rows older than one year prove the key
 and the subscription. Any future data pull that omits from= gets one
 year of data silently; S2 ingest must always set from= and to=.
 
+2026-09-17 — data/ does NOT persist between Claude Code cloud sessions.
+Evidence: each session runs in a fresh, ephemeral container (the platform
+documents this); the .venv built in the S1 session was absent when the
+S1b session started and had to be rebuilt; no persistent volume is
+mounted under the repo. Within one session the container survives across
+turns (the S1b .venv was still present when S2 began in the same session).
+Rule: every cloud session that needs data runs src/fetch_bulk.py first,
+then src/ingest.py. Nothing under data/ is treated as durable; anything
+worth keeping is committed (reports, manifests of row counts) or
+regenerated. Alternatives rejected: committing parquet (multi-GB, and
+Sharadar terms); a cloud volume (none is offered by the environment).
+
+2026-09-17 — Sharadar bulk downloads are BLOCKED from Claude Code on the
+web. api.sharadar.com answers years=full with a 302 to
+static-sharadar.nyc3.digitaloceanspaces.com and the egress proxy rejects
+the CONNECT to that host with 403 (policy denial, logged by the proxy as
+connect_rejected). Verified 2026-09-17 with tickers.csv.zip; the
+download=1 flag redirects to the same host. The paged API on
+api.sharadar.com is allowed, capped at 100,000 rows per request (HTTP 400
+"limit too large" above that), about 3 seconds per 100,000-row page.
+S2 ingest via bulk files therefore needs either (a) the environment's
+network policy to allow static-sharadar.nyc3.digitaloceanspaces.com, or
+(b) running src/fetch_bulk.py on Matt's machine, or (c) a paged-API
+pull of roughly 3,000 requests over 2–3 hours. Matt decides; recorded as
+an open question in the S2 wrap. Not ruled out: any of the three.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
