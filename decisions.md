@@ -209,6 +209,94 @@ launch_500 (0.16%). Validity gate passed (0.5% to 5%). 4,361 of the
 7,787 universe tickers are delisted today. Three rows were recomputed
 independently with pandas from the price table and matched to 1e-9.
 
+2026-09-17 — S3 feature interpretations (spec section 5 onto Sharadar
+fields; implemented in src/features.py). Each item is where the spec
+text left a choice; none changes a threshold.
+Quarter sequence: ARQ rows per (ticker, calendardate), earliest filing
+kept when a quarter is re-filed (10-K repeating a 10-Q, amendments carry
+identical figures). Lags are prior quarters in calendardate order and
+each use checks the month distance (q4 = 12 months back, q8 = 24), so a
+missing quarter yields null rather than a wrong pair.
+Point in time: the grid joins the latest quarter with filing date <=
+decision date (ASOF); tests/test_point_in_time.py holds AAPL 2019-07-30
+versus 2019-07-31 around the 2019-07-31 filing.
+Lags T-3/T-6/T-12: the base feature row at last_day(month_end - L
+months) for the same ticker; null when the ticker had no trade that
+month.
+H1: YoY EPS growth null when the base quarter's EPS <= 0.
+H4: revenue YoY growth over q0..q3 strictly rising; operating margin
+opinc/revenue q0 > q4; null if any revenue used is not positive.
+H5: pe is the daily table's pe on the decision date (Damodaran, TTM);
+trailing 4-quarter EPS growth = sum(eps q0..q3)/sum(eps q4..q7) - 1;
+null if either sum <= 0 or pe <= 0.
+H6: daily pe on the decision date below the median of the ticker's own
+SF1 quarterly pe (positive values) over q0..q19, AND YoY EPS growth q0
+above the median of its own q0..q19 growths; null unless 20 quarters
+exist. Both SF1 pe and daily pe are marketcap over TTM earnings.
+H7: daily marketcap (USD millions) < 2000 on the decision date.
+H8: FCF-per-share slope over q3..q0 by least squares (sign of
+3*q0 + q1 - q2 - 3*q3); price return = closeadj at q0's quarter end over
+closeadj at q4's quarter end - 1, i.e. the four quarters the slope
+spans; flag when slope > 0 and return within [-10%, +10%].
+H9: 6-month return = closeadj(m-1)/closeadj(m-7) - 1, 12-month =
+closeadj(m-1)/closeadj(m-13) - 1 (skipping the latest month);
+percent_rank within the universe rows of that month; top decile =
+percentile >= 0.9; two flags (rs6, rs12). Null when the row was not in
+the universe that month.
+H10: 13F holdings for quarter end Q are treated as public 45 days after
+Q (the SEC deadline; Sharadar holdings has no filing date column).
+Institutional shares = sum(units)*1000 over securitytype SHR. Sharadar
+sharesbas is restated to today's split basis while holdings units are
+as reported, so shares outstanding at Q = sharesbas(ARQ, calendardate
+Q, filed <= decision date) * close/closeunadj at Q. Verified on AAPL
+2019-12-31: 60.9% institutional after rescaling, 15% without. Flag =
+level < 40% and level > prior quarter's level.
+H11: distinct ownername with transactioncode P and securityadcode NA
+(non-derivative acquisition) whose filing date falls in the trailing 90
+days; flag >= 3; null before 2008-04-01 (data starts 2008-01-02).
+H13: weekly bars from daily rows (week = Monday-start calendar week,
+close = last trade, volume = sum). Cross = weekly close above the
+30-week SMA after the prior week closed at or below it; SMA rising =
+SMA30 > SMA30 four weeks earlier; base = over the 26 weeks before the
+cross week, (max - min)/midpoint of weekly closes <= 0.4 (i.e. within
++/-20%); volume = the cross week's average daily volume > 1.5x the
+average daily volume of the prior 10 trading weeks (about 50 days).
+Flag if such a cross week ended within 56 days before the decision
+trade date; null with fewer than 34 weeks of history.
+H14: per trading day, ATR20/close and 20-day average volume; a
+completed pattern is a close above the prior 20-day high on a day where
+both ratios were lower at day -1 than at day -21, and lower at -21 than
+at -41. Flag if a completion falls within 28 days before the decision
+trade date; null with fewer than 62 trading days of history.
+H15: close on the decision trade date >= 0.85 x the highest daily high
+over the trailing 252 trading days; null with fewer than 252.
+H16: UNAVAILABLE. The funds table (SFP) carries OHLCV only; no Sharadar
+table has ETF shares outstanding, so the "shares outstanding change"
+leg cannot be computed. The S&P 500 sector-weight leg would be
+computable from sp500 constituents, daily marketcap, and tickers.sector
+but is not built alone (spec section 10: do not substitute).
+H20: EBITDA is the trailing four ARQ quarters; net cash (debt - cash <=
+0) is TRUE outright; positive net debt with EBITDA <= 0 is FALSE.
+H21: sharesbas q0 <= sharesbas q8 x 1.02; Sharadar sharesbas is split
+adjusted (AAPL 2013 shows 25.0bn, today's basis) so no adjustment.
+Control: daily pe < 15 and pb < 1.5 with non-positive values null; SF1
+divyield (a fraction, 0.023 = 2.3%) > 0.02.
+Unavailable and deferred hypotheses (H2, H3, H12, H16, H17, H18) are
+all-null boolean columns in features.parquet so S4 reports them as
+unavailable rather than silently omitting them.
+
+2026-09-17 — Regime tags (spec section 6; src/regime.py): SPY month-end
+closeadj from the funds table; all-time high over month-end closes; a
+drawdown episode runs from one all-time high to the next and its trough
+is the lowest month-end close inside it; months_since_trough counts
+from the current episode's trough while in drawdown, else from the
+trough of the episode just closed. Consequence: the 2011 dip sits
+inside the 2007-2013 episode (SPY's total-return series did not regain
+its 2007 high until 2012), so months-since-trough there is 31, not the
+2011 low. VIX close from the CBOE daily CSV, last close on or before
+the month end, fetched to data/raw/VIX_History.csv. Buckets as the spec
+lists; no VIX bucket is specified, so the raw close is stored.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
