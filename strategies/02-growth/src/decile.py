@@ -19,7 +19,11 @@ coverage beside it; Wilson CI over a fixed base; D8 at 100 events; declared
 directions from spec section 3, fixed here before any result was seen;
 build-window pass = extreme-cell lift >= 1.5, lower bound >= 1.2, and
 Spearman |rho| >= 0.6 with the declared sign over D8-sufficient deciles;
-composite per section 4. Holdout rows are never summarized here.
+composite per section 4 with Matt's S7 recipe (mean of raw percentile
+ranks, decisions.md 2026-09-17). This module runs the build window; S7's
+src/decile_holdout.py reuses its functions on the holdout window.
+realized_vol_12m is an exploratory feature outside the pass criteria (S7
+brief); it is ranked like the others and reported separately.
 """
 from __future__ import annotations
 
@@ -29,7 +33,7 @@ import sys
 import duckdb
 import pandas as pd
 
-from src.config import BUILD_END, BUILD_START, LAGS, MIN_EVENTS_PER_CELL, PROCESSED_DIR, REPORTS_DIR
+from src.config import BUILD_END, BUILD_START, LAGS, MIN_EVENTS_PER_CELL, PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from src.stats import BUCKET_TYPES, f2, md_table, pct, wilson
 
 # name -> (SQL over features f, declared direction). Order is the report order.
@@ -58,7 +62,9 @@ FEATURES: dict[str, tuple[str, str]] = {
     "pb": ("f.pb", "LOW"),
     "dividend_yield": ("f.divyield", "LOW"),
 }
+EXPLORATORY: dict[str, tuple[str, str]] = {"realized_vol_12m": ("f.realized_vol_12m", "n/a")}
 LABELS = ["win_50", "win_100", "launch_300"]
+HOLDOUT_START, HOLDOUT_END_12M = "2020-01-31", "2025-06-30"
 PASS_LIFT, PASS_CI_LOW, PASS_RHO, RHO_MIN_DECILES = 1.5, 1.2, 0.6, 5
 EXTREME = {"HIGH": [10], "LOW": [1], "LOWMID": [3, 4, 5, 6]}
 
@@ -92,58 +98,80 @@ def spearman(x: list[float], y: list[float]) -> float:
 # ------------------------------------------------------------------ data
 
 def build_deciles(con: duckdb.DuckDBPyConnection) -> None:
-    raw = ", ".join(f"{expr} AS {name}" for name, (expr, _) in FEATURES.items())
+    """d: per (ticker, month_end, lag): labels, regime, decile and percentile rank per feature, every month."""
+    # Exploratory realized volatility: annualized std of daily log returns over the 252 trading days
+    # ending on the row's trade date (null with fewer than 252). Computed here, not in features.py.
+    con.execute(f"""
+        CREATE TABLE rv AS
+        WITH r AS (
+            SELECT ticker, date, ln(closeadj / lag(closeadj) OVER (PARTITION BY ticker ORDER BY date)) AS lr
+            FROM read_parquet('{(RAW_DIR / 'stocks.parquet').as_posix()}')
+            WHERE closeadj > 0 AND ticker IN (SELECT DISTINCT ticker FROM {pq('universe.parquet')})
+        )
+        SELECT ticker, date,
+               CASE WHEN count(lr) OVER w = 252 THEN stddev_samp(lr) OVER w * sqrt(252) END AS realized_vol_12m
+        FROM r WINDOW w AS (PARTITION BY ticker ORDER BY date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW)
+    """)
+    allf = {**FEATURES, **EXPLORATORY}
+    raw = ", ".join(f"{expr} AS {name}" for name, (expr, _) in allf.items())
     con.execute(f"""
         CREATE TABLE d0 AS
         SELECT f.ticker, f.month_end, f.lag, {raw},
                l12.win_50, l12.win_100, l24.launch_300,
-               r.drawdown_bucket, r.mst_bucket,
-               f.month_end BETWEEN DATE '{BUILD_START}' AND DATE '{BUILD_END}' AS in_build
-        FROM {pq('features.parquet')} f
+               r.drawdown_bucket, r.mst_bucket
+        FROM (SELECT f.*, rv.realized_vol_12m FROM {pq('features.parquet')} f
+              LEFT JOIN rv ON rv.ticker = f.ticker AND rv.date = f.trade_date) f
         JOIN {pq('labels12.parquet')} l12 USING (ticker, month_end)
         JOIN {pq('labels.parquet')} l24 USING (ticker, month_end)
         JOIN {pq('regime.parquet')} r ON r.month_end = f.month_end
     """)
     ranks = ", ".join(
-        f"CASE WHEN {name} IS NOT NULL THEN least(10, floor(10 * percent_rank() OVER "
-        f"(PARTITION BY month_end, lag, {name} IS NULL ORDER BY {name})) + 1)::INTEGER END AS dec_{name}"
-        for name in FEATURES)
+        f"CASE WHEN {name} IS NOT NULL THEN percent_rank() OVER "
+        f"(PARTITION BY month_end, lag, {name} IS NULL ORDER BY {name}) END AS pr_{name}"
+        for name in allf)
+    decs = ", ".join(f"CASE WHEN pr_{name} IS NOT NULL THEN least(10, floor(10 * pr_{name}) + 1)::INTEGER END AS dec_{name}"
+                     for name in allf)
     con.execute(f"""
         CREATE TABLE d AS
-        SELECT ticker, month_end, lag, win_50, win_100, launch_300, drawdown_bucket, mst_bucket, in_build,
-               {ranks}
-        FROM d0
+        SELECT *, {decs} FROM (
+            SELECT ticker, month_end, lag, win_50, win_100, launch_300, drawdown_bucket, mst_bucket, {ranks}
+            FROM d0)
     """)
     out = PROCESSED_DIR / "deciles.parquet"
     con.execute(f"COPY (SELECT * FROM d ORDER BY month_end, ticker, lag) TO '{out.as_posix()}' (FORMAT PARQUET, COMPRESSION ZSTD)")
     n = con.execute("SELECT count(*) FROM d").fetchone()[0]
-    print(f"deciles.parquet: {n:,} rows, {len(FEATURES)} features -> {out}")
+    print(f"deciles.parquet: {n:,} rows, {len(FEATURES)} features + {len(EXPLORATORY)} exploratory -> {out}")
 
 
 # ------------------------------------------------------------- statistics
 
-def cells(con) -> pd.DataFrame:
-    """One row per (feature, lag, bucket_type, bucket, decile) with counts for every label, build window."""
+def cells(con, start: str = BUILD_START, end: str = BUILD_END, features: list[str] | None = None) -> pd.DataFrame:
+    """One row per (feature, lag, bucket_type, bucket, decile) with, per label, the rows whose label is
+    observable and the events among them. Rows whose label is null (24-month label past 2024-08 in the
+    holdout) are excluded from that label's counts only."""
     frames = []
-    for name in FEATURES:
+    names = features or list(FEATURES)
+    counts = ", ".join(f"count({lb}) AS n_{lb}, count(*) FILTER (WHERE {lb}) AS k_{lb}" for lb in LABELS)
+    for name in names:
         rows = con.execute(f"""
             WITH g AS (
-                SELECT lag, 'all' AS bucket_type, 'ALL' AS bucket, dec_{name} AS dec, win_50, win_100, launch_300 FROM d WHERE in_build
+                SELECT lag, 'all' AS bucket_type, 'ALL' AS bucket, dec_{name} AS dec, win_50, win_100, launch_300 FROM d
+                 WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
                 UNION ALL
-                SELECT lag, 'drawdown', drawdown_bucket, dec_{name}, win_50, win_100, launch_300 FROM d WHERE in_build
+                SELECT lag, 'drawdown', drawdown_bucket, dec_{name}, win_50, win_100, launch_300 FROM d
+                 WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
                 UNION ALL
-                SELECT lag, 'mst', mst_bucket, dec_{name}, win_50, win_100, launch_300 FROM d WHERE in_build
+                SELECT lag, 'mst', mst_bucket, dec_{name}, win_50, win_100, launch_300 FROM d
+                 WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
             )
-            SELECT lag, bucket_type, bucket, dec, count(*) AS n,
-                   count(*) FILTER (WHERE win_50) AS k_win_50,
-                   count(*) FILTER (WHERE win_100) AS k_win_100,
-                   count(*) FILTER (WHERE launch_300) AS k_launch_300
+            SELECT lag, bucket_type, bucket, dec, count(*) AS n, {counts}
             FROM g GROUP BY 1, 2, 3, 4
         """).fetchdf()
         rows["feature"] = name
         frames.append(rows)
     c = pd.concat(frames, ignore_index=True)
-    c["_o"] = c["feature"].map({f: i for i, f in enumerate(FEATURES)})
+    order = {f: i for i, f in enumerate(list(FEATURES) + list(EXPLORATORY))}
+    c["_o"] = c["feature"].map(order)
     c["dec"] = c["dec"].astype("Int64")
     return c.sort_values(["_o", "lag", "bucket_type", "bucket", "dec"], na_position="last").drop(columns="_o").reset_index(drop=True)
 
@@ -152,18 +180,18 @@ def decile_table(c: pd.DataFrame) -> pd.DataFrame:
     """Per (feature, lag, bucket, label): base among non-null rows, coverage, and per-decile lift."""
     out = []
     for (feature, lag, bt, b), grp in c.groupby(["feature", "lag", "bucket_type", "bucket"], sort=False):
-        rows_all = grp["n"].sum()
         nn = grp[grp["dec"].notna()]
-        n_nn = nn["n"].sum()
         for label in LABELS:
+            rows_all = grp[f"n_{label}"].sum()
+            n_nn = nn[f"n_{label}"].sum()
             k_nn = nn[f"k_{label}"].sum()
             base = k_nn / n_nn if n_nn else float("nan")
             for _, r in nn.iterrows():
-                k, n = int(r[f"k_{label}"]), int(r["n"])
+                k, n = int(r[f"k_{label}"]), int(r[f"n_{label}"])
                 rate = k / n if n else float("nan")
                 lo, hi = wilson(k, n)
-                out.append({"feature": feature, "direction": FEATURES[feature][1], "lag": lag, "bucket_type": bt,
-                            "bucket": b, "label": label, "decile": int(r["dec"]), "rows": n, "row_share": n / n_nn,
+                out.append({"feature": feature, "direction": {**FEATURES, **EXPLORATORY}[feature][1], "lag": lag, "bucket_type": bt,
+                            "bucket": b, "label": label, "decile": int(r["dec"]), "rows": n, "row_share": n / n_nn if n_nn else float("nan"),
                             "events": k, "rate": rate, "base": base, "coverage": n_nn / rows_all,
                             "lift": rate / base if base else float("nan"),
                             "ci_low": lo / base if base else float("nan"), "ci_high": hi / base if base else float("nan"),
@@ -175,15 +203,17 @@ def extreme_table(c: pd.DataFrame, dt: pd.DataFrame) -> pd.DataFrame:
     """The declared extreme cell per (feature, lag, bucket, label), with rho and the build-window verdict."""
     out = []
     for (feature, lag, bt, b), grp in c.groupby(["feature", "lag", "bucket_type", "bucket"], sort=False):
+        if feature not in FEATURES:
+            continue
         direction = FEATURES[feature][1]
         nn = grp[grp["dec"].notna()]
-        n_nn = nn["n"].sum()
-        rows_all = grp["n"].sum()
         ext = nn[nn["dec"].isin(EXTREME[direction])]
         for label in LABELS:
+            rows_all = grp[f"n_{label}"].sum()
+            n_nn = nn[f"n_{label}"].sum()
             k_nn = nn[f"k_{label}"].sum()
             base = k_nn / n_nn if n_nn else float("nan")
-            k, n = int(ext[f"k_{label}"].sum()), int(ext["n"].sum())
+            k, n = int(ext[f"k_{label}"].sum()), int(ext[f"n_{label}"].sum())
             rate = k / n if n else float("nan")
             lo, hi = wilson(k, n)
             lift = rate / base if base else float("nan")
@@ -229,7 +259,7 @@ def verdicts(ex: pd.DataFrame) -> pd.DataFrame:
 
 # --------------------------------------------------------------- composite
 
-def composite(con, vd: pd.DataFrame, ex: pd.DataFrame) -> tuple[list[str], bool, pd.DataFrame]:
+def composite_members(vd: pd.DataFrame, ex: pd.DataFrame) -> tuple[list[str], bool]:
     members = vd[(vd["label"] == "win_50") & (vd["verdict_build"] == "PASS-build")]["feature"].tolist()
     unconfirmed = False
     if len(members) < 3:
@@ -237,16 +267,20 @@ def composite(con, vd: pd.DataFrame, ex: pd.DataFrame) -> tuple[list[str], bool,
         best = (ex[(ex["label"] == "win_50") & (ex["bucket_type"] == "all") & ex["sufficient"]]
                 .groupby("feature")["lift"].max().sort_values(ascending=False))
         members = [f for f in FEATURES if f in best.index[:3]]
-    oriented = ", ".join(
-        f"CASE WHEN FEATURES_DIR = 'x' THEN 0 END" for _ in [])  # placeholder to keep f-string simple
-    terms = []
-    for m in members:
-        terms.append(f"dec_{m}" if FEATURES[m][1] in ("HIGH", "LOWMID") else f"(11 - dec_{m})")
-    nn = " AND ".join(f"dec_{m} IS NOT NULL" for m in members)
+    return members, unconfirmed
+
+
+def composite(con, members: list[str], start: str = BUILD_START, end: str = BUILD_END) -> pd.DataFrame:
+    """Composite score = mean of oriented raw percentile ranks (1 - pr for LOW features) over rows where every
+    member is non-null (Matt's S7 recipe), ranked into deciles per (month_end, lag) with the tie rule.
+    Returns decile-10 and deciles-8-10 cells per lag, bucket, label for the window."""
+    terms = [f"pr_{m}" if FEATURES[m][1] in ("HIGH", "LOWMID") else f"(1 - pr_{m})" for m in members]
+    nn = " AND ".join(f"pr_{m} IS NOT NULL" for m in members)
+    con.execute("DROP TABLE IF EXISTS comp")
     con.execute(f"""
         CREATE TABLE comp AS
         WITH c AS (
-            SELECT ticker, month_end, lag, win_50, win_100, launch_300, drawdown_bucket, mst_bucket, in_build,
+            SELECT ticker, month_end, lag, win_50, win_100, launch_300, drawdown_bucket, mst_bucket,
                    CASE WHEN {nn} THEN ({" + ".join(terms)}) / {len(terms)}.0 END AS score
             FROM d
         )
@@ -254,37 +288,40 @@ def composite(con, vd: pd.DataFrame, ex: pd.DataFrame) -> tuple[list[str], bool,
                        (PARTITION BY month_end, lag, score IS NULL ORDER BY score)) + 1)::INTEGER END AS dec_comp
         FROM c
     """)
-    rows = con.execute("""
+    counts = ", ".join(f"count({lb}) AS n_{lb}, count(*) FILTER (WHERE {lb}) AS k_{lb}" for lb in LABELS)
+    rows = con.execute(f"""
         WITH g AS (
-            SELECT lag, 'all' AS bucket_type, 'ALL' AS bucket, dec_comp, win_50, win_100, launch_300 FROM comp WHERE in_build
-            UNION ALL SELECT lag, 'drawdown', drawdown_bucket, dec_comp, win_50, win_100, launch_300 FROM comp WHERE in_build
-            UNION ALL SELECT lag, 'mst', mst_bucket, dec_comp, win_50, win_100, launch_300 FROM comp WHERE in_build
+            SELECT lag, 'all' AS bucket_type, 'ALL' AS bucket, dec_comp, win_50, win_100, launch_300 FROM comp
+             WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
+            UNION ALL SELECT lag, 'drawdown', drawdown_bucket, dec_comp, win_50, win_100, launch_300 FROM comp
+             WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
+            UNION ALL SELECT lag, 'mst', mst_bucket, dec_comp, win_50, win_100, launch_300 FROM comp
+             WHERE month_end BETWEEN DATE '{start}' AND DATE '{end}'
         )
-        SELECT lag, bucket_type, bucket, dec_comp AS dec, count(*) AS n,
-               count(*) FILTER (WHERE win_50) AS k_win_50, count(*) FILTER (WHERE win_100) AS k_win_100,
-               count(*) FILTER (WHERE launch_300) AS k_launch_300
+        SELECT lag, bucket_type, bucket, dec_comp AS dec, count(*) AS n, {counts}
         FROM g GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
     """).fetchdf()
     rows["dec"] = rows["dec"].astype("Int64")
     out = []
     for (lag, bt, b), grp in rows.groupby(["lag", "bucket_type", "bucket"], sort=False):
-        rows_all = grp["n"].sum()
         nn_ = grp[grp["dec"].notna()]
-        n_nn = nn_["n"].sum()
         for label in LABELS:
+            rows_all = grp[f"n_{label}"].sum()
+            n_nn = nn_[f"n_{label}"].sum()
             base = nn_[f"k_{label}"].sum() / n_nn if n_nn else float("nan")
             for cell_name, decs in (("decile 10", [10]), ("deciles 8-10", [8, 9, 10])):
                 sel = nn_[nn_["dec"].isin(decs)]
-                k, n = int(sel[f"k_{label}"].sum()), int(sel["n"].sum())
+                k, n = int(sel[f"k_{label}"].sum()), int(sel[f"n_{label}"].sum())
                 rate = k / n if n else float("nan")
                 lo, hi = wilson(k, n)
                 out.append({"lag": lag, "bucket_type": bt, "bucket": b, "label": label, "cell": cell_name,
-                            "rows": n, "row_share": n / n_nn if n_nn else float("nan"), "pool_share_of_all": n / rows_all,
-                            "events": k, "rate": rate, "base": base, "coverage": n_nn / rows_all,
+                            "rows": n, "row_share": n / n_nn if n_nn else float("nan"),
+                            "pool_share_of_all": n / rows_all if rows_all else float("nan"),
+                            "events": k, "rate": rate, "base": base, "coverage": n_nn / rows_all if rows_all else float("nan"),
                             "lift": rate / base if base else float("nan"),
                             "ci_low": lo / base if base else float("nan"), "ci_high": hi / base if base else float("nan"),
                             "sufficient": k >= MIN_EVENTS_PER_CELL})
-    return members, unconfirmed, pd.DataFrame(out)
+    return pd.DataFrame(out)
 
 
 # ---------------------------------------------------------------- report
@@ -367,8 +404,8 @@ def write_report(dt, ex, vd, members, unconfirmed, comp, base_by_year, n_lag0) -
           ("Members = features that PASS-build on win_50: " if not unconfirmed else
            "Fewer than 3 features PASS-build on win_50; composite built from the top 3 by extreme-decile lift, UNCONFIRMED: ")
           + ", ".join(members) + ".",
-          "Composite = mean oriented decile (11 - decile for LOW features) over rows where every member is non-null,",
-          "ranked into deciles per (month_end, lag). pool share = rows in the cell / all universe rows at that lag.", ""]
+          "Composite = mean oriented raw percentile rank (1 - rank for LOW features) over rows where every member is",
+          "non-null, ranked into deciles per (month_end, lag). pool share = rows in the cell / all universe rows at that lag.", ""]
     rows = []
     for lag in LAGS:
         for label in LABELS:
@@ -402,20 +439,22 @@ def main() -> int:
     con.execute(f"SET temp_directory = '{tmp.as_posix()}'")
     con.execute("SET memory_limit = '10GB'")
     build_deciles(con)
-    n_lag0, k50 = con.execute("SELECT count(*), count(*) FILTER (WHERE win_50) FROM d WHERE in_build AND lag = 0").fetchone()
+    n_lag0, k50 = con.execute(f"SELECT count(*), count(*) FILTER (WHERE win_50) FROM d WHERE month_end BETWEEN DATE '{BUILD_START}' AND DATE '{BUILD_END}' AND lag = 0").fetchone()
     base50 = k50 / n_lag0
     print(f"build window: {n_lag0:,} rows per lag, win_50 base {base50:.2%}")
     if not 0.03 <= base50 <= 0.25:
         print("STOP: win_50 base rate outside [3%, 25%] (GROWTH-002 section 3)")
         return 1
-    base_by_year = con.execute("""
+    base_by_year = con.execute(f"""
         SELECT year(month_end), count(*), count(*) FILTER (WHERE win_50), count(*) FILTER (WHERE win_100),
-               count(*) FILTER (WHERE launch_300) FROM d WHERE in_build AND lag = 0 GROUP BY 1 ORDER BY 1""").fetchall()
+               count(*) FILTER (WHERE launch_300) FROM d
+        WHERE month_end BETWEEN DATE '{BUILD_START}' AND DATE '{BUILD_END}' AND lag = 0 GROUP BY 1 ORDER BY 1""").fetchall()
     c = cells(con)
     dt = decile_table(c)
     ex = extreme_table(c, dt)
     vd = verdicts(ex)
-    members, unconfirmed, comp = composite(con, vd, ex)
+    members, unconfirmed = composite_members(vd, ex)
+    comp = composite(con, members)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     dt.to_csv(REPORTS_DIR / "s6_decile_cells.csv", index=False)
     ex.to_csv(REPORTS_DIR / "s6_extreme_cells.csv", index=False)
