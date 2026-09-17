@@ -25,7 +25,7 @@ Because the composite recipe changed by ruling, the S6 build report was regenera
 - strategies/02-growth/reports/decile_build_results.md, decile_build_reading.md, s6_composite.csv, s6_decile_cells.csv, s6_extreme_cells.csv (regenerated under the S7 composite recipe; only composite numbers changed)
 - decisions.md (one ruling block: S7 holdout rulings)
 - BACKLOG.md (S7 DONE; chunk 4b closed)
-- docs/wrapits/WRAPIT_2026-09-17-1820_s7-decile-holdout-chunk-4b-end.md (this file)
+- docs/wrapits/WRAPIT_2026-09-17-1810_s7-decile-holdout-chunk-4b-end.md (this file)
 - data/processed/deciles.parquet (regenerated with percentile columns and realized vol; gitignored)
 
 ## Environment Variables [MANDATORY]
