@@ -492,6 +492,99 @@ Chunk 4b ends with S7. The spec's S7 reading covers confirmed
 features, composite holdout lift, candidate pool size, and expected
 win_50 per ten picks by regime.
 
+## Chunk 4c — GROWTH-003 winner anatomy (spec dated 2026-09-17, S8 built 2026-09-17 AEST)
+
+2026-09-17 — Spec placed at specs/GROWTH-003-winner-anatomy.md (root
+specs/, per CLAUDE.md), although its header says
+strategies/02-growth/specs/. Extends GROWTH-001 and GROWTH-002; the
+universe, labels, features, deciles, and regime tags are reused
+unchanged.
+
+2026-09-17 — F2 recorded: build and holdout windows are pooled for
+description, 2006-01 to 2025-06 for win_100 and 2006-01 to 2024-06
+for launch_300 (the launch_300 window ends where the spec says, two
+months before the label stops being observable). This is descriptive,
+not predictive; the holdout gate does not apply. The population is
+every universe stock-month in the window whose label is observable,
+winners included (F3).
+
+2026-09-17 — Section 3.5 (Matt's S8 addition): loss_50 =
+fwd_12m_return <= -0.50 on the existing grid (labels12.parquet), a
+descriptive label, not a launch or win label. For each of the 22
+GROWTH-002 features plus realized_vol_12m, per decile: rows, win_100
+rate, loss_50 rate, ratio = win_100 rate / loss_50 rate, median
+fwd_12m_return, coverage = rows with the feature non-null over all
+rows at that lag; pooled 2006-01 to 2025-06; D8 on the ratio, which
+reads "insufficient" when either the win_100 count or the loss_50
+count in the cell is under 100. The report shows lag 0; lags 3, 6, 12
+are in reports/s8_loss50_deciles.csv.
+
+2026-09-17 — S8 field rulings (src/anatomy.py; every section-2 field
+computed on a dense monthly grid 2003-01 to 2027-06 for every ticker
+ever in the universe, written to data/processed/anatomy_fields.parquet):
+Events: the Sharadar events table (bulk, added to config.BULK_TABLES
+and ingest.DATE_COLUMN) stores 8-K item X.0Y as the two-digit code
+"XY" in eventcodes, pipe-joined per filing date (descriptions table,
+table = eventcodes, read 2026-09-17). Spec items map to codes 11, 12,
+21, 22, 23, 32, 52, 53, 71, 81. A filing date with several codes counts
+once per code. Trailing 12 months = calendar months m-11..m; the 12
+months after = m+1..m+12 (forward-looking, suffix _f12). The modern
+item numbering starts 2004-08-23, so trailing counts are null before
+2005-08-31 and forward counts null after 2025-08-31. The table also
+carries non-8-K codes (34 = 13G, 35 = 13D, 91 = exhibits); they are not
+used. Coverage per code per year is reported before use.
+Insiders: Form 4 rows with securityadcode NA and transactioncode P or
+S, by filing date; net buys = P rows minus S rows in the trailing 12
+months; officer buys = P rows with isofficer Y; null before
+2008-12-31 (data start plus 12 months).
+Holdings: inst_pct level taken from features.parquet at the as-of
+month (any lag), 4-quarter delta by self join at month minus 12; no
+13F logic was recomputed.
+Fundamentals: ARQ, earliest filing per quarter (features.py rule),
+latest quarter filed on or before the month end and within 16 months
+(the universe's EPS staleness window). Revenue growth YoY and share
+count change 4q/8q check the quarter distance (11 to 13 or 23 to 25
+months) as features.py does. rev_growth_streak = consecutive ARQ
+rows with revenue above the year-earlier quarter, quarters_since_loss
+= consecutive rows with netinc > 0, both ending at the latest row,
+capped at 12, and stopped by the start of available history (young
+companies read low). Market cap for cash and net debt ratios is
+daily.marketcap at the last trade date, within 7 days.
+Prices: three-year drawdown and months since the three-year low use
+monthly closeadj extremes over 36 months (null with fewer); realized
+volatility uses decile.py's definition; the 20-day dollar volume uses
+universe.py's; price bucket from closeunadj.
+Tickers: years_since_first_price from firstpricedate; sector,
+industry, exchange, scalemarketcap are the table's current values, not
+point in time. scalemarketcap records size after any move; its ratio
+is reported with that caveat and the point-in-time size fields are
+marketcap_musd and the marketcap decile.
+Deciles at T-6 and T-12 are deciles.parquet lags 6 and 12 of the same
+row. Profile medians at T-6 and T-12 compare the winner's own field
+six and twelve months earlier with the population at that earlier
+month. Categorical ratios = winner share / population share among
+non-null rows, D8 on winners in the bucket; scalemarketcap,
+drawdown_bucket and mst_bucket added to the spec's eight because they
+are section-2 categoricals. Count fields are also reported as means
+because medians of small counts tie.
+Timeline (3.2): the population overlay at step k is the median over
+winners of the population median at each winner's month + k, so it is
+aligned on calendar month and weighted by where the winners sit in
+time; price and share count are relative to each ticker's own T-0.
+During the move (3.3): share count change = ARQ sharesbas known at
+T+12 / known at T-0 - 1; "any" shares use >= 1 filing or > 10% share
+growth, ratio D8 on the winners with the event.
+Sector x regime (3.4): winner rate per cell plus the sector's share of
+the bucket's winners over its share of the bucket's rows, D8 on the
+cell's winners.
+No random element in S8; ordering is explicit in every output.
+
+2026-09-17 — Reading note recorded as a finding, not a ruling: the one
+3.5 cell above 1.0 (insider_buy_count_90d decile 7, ratio 1.69) is 15
+crisis months in which broad insider buying pushed one-buyer rows out
+of decile 1; it marks market troughs. The 5.02 CEO-change proxy fires
+for over 80% of rows a year and separates nothing.
+
 ## Ruled out (do not re-suggest without a specific new reason)
 
 - Free data substitutes for Sharadar (spec section 10).
