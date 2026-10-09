@@ -1,0 +1,113 @@
+{
+  "window": {
+    "start": "2021-06-13",
+    "end": "2026-06-13"
+  },
+  "v30": {
+    "n_trades": 16,
+    "wins": 9,
+    "win_rate": 56.2,
+    "total_pnl": 6313.51,
+    "avg_win": 970.62,
+    "avg_loss": -346.01,
+    "profit_factor": 3.607,
+    "avg_hold_days": 58.1,
+    "max_dd": -984.94,
+    "max_dd_pct": 0.98,
+    "sharpe": 4.79,
+    "exit_reasons": {
+      "STOP": 6,
+      "TRAIL": 6,
+      "TIME": 4
+    },
+    "yearly": {
+      "2021": {
+        "trades": 2,
+        "wins": 0,
+        "pnl": -739.59
+      },
+      "2022": {
+        "trades": 4,
+        "wins": 3,
+        "pnl": 476.35
+      },
+      "2023": {
+        "trades": 4,
+        "wins": 1,
+        "pnl": -756.88
+      },
+      "2024": {
+        "trades": 3,
+        "wins": 2,
+        "pnl": 1657.03
+      },
+      "2025": {
+        "trades": 3,
+        "wins": 3,
+        "pnl": 5676.6
+      }
+    }
+  },
+  "v50": {
+    "n_trades": 17,
+    "wins": 12,
+    "win_rate": 70.6,
+    "total_pnl": 3886.91,
+    "avg_win": 419.14,
+    "avg_loss": -228.56,
+    "profit_factor": 4.401,
+    "avg_hold_days": 71.1,
+    "max_dd": -451.96,
+    "max_dd_pct": 0.45,
+    "sharpe": 4.62,
+    "exit_reasons": {
+      "TIME": 10,
+      "TARGET": 5,
+      "STOP": 2
+    },
+    "yearly": {
+      "2021": {
+        "trades": 2,
+        "wins": 0,
+        "pnl": -376.28
+      },
+      "2022": {
+        "trades": 4,
+        "wins": 3,
+        "pnl": 707.49
+      },
+      "2023": {
+        "trades": 3,
+        "wins": 1,
+        "pnl": -412.66
+      },
+      "2024": {
+        "trades": 3,
+        "wins": 3,
+        "pnl": 1144.33
+      },
+      "2025": {
+        "trades": 4,
+        "wins": 4,
+        "pnl": 2038.02
+      },
+      "2026": {
+        "trades": 1,
+        "wins": 1,
+        "pnl": 786.01
+      }
+    },
+    "skipped_atr_filter": 2
+  },
+  "comparison": {
+    "pf_v30": 3.607,
+    "pf_v50": 4.401,
+    "pf_change_pct": 22.0,
+    "pf_flag": false,
+    "dd_v30_pct": 0.98,
+    "dd_v50_pct": 0.45,
+    "dd_change_pct": -54.1,
+    "dd_flag": false,
+    "proceed": true
+  }
+}
